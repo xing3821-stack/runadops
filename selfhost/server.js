@@ -263,6 +263,35 @@ route('DELETE', /^\/api\/records\/([\w-]+)$/, async (req, res, user, m) => {
   ok(res);
 });
 
+/* ---------- AI 生成投放物料 ---------- */
+route('POST', /^\/api\/ai\/brief$/, async (req, res, user) => {
+  const body = await readBody(req);
+  let brief = {};
+  if (body.briefId) {
+    const [rows] = await pool.query("SELECT data FROM records WHERE id=? AND type='brief'", [body.briefId]);
+    if (rows[0]) brief = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
+  }
+  Object.assign(brief, body.fields || {});
+  if (body.product !== undefined) brief.product = body.product;
+  if (body.extra !== undefined) brief.extra = body.extra;
+
+  let ai;
+  try {
+    ai = require('./ai.js');
+  } catch (e) {
+    return fail(res, 500, 'AI 模块没装好:' + e.message + ' —— 在 ' + __dirname + ' 下跑 npm install @anthropic-ai/sdk zod');
+  }
+  try {
+    const out = await ai.generate(brief);
+    console.log('[ai] ' + user.email + ' 生成 "' + (brief.project || '(无名)') + '" 用了 '
+      + out.usage.input_tokens + '+' + out.usage.output_tokens + ' token,约 $' + out.usage.cost_usd);
+    ok(res, out);
+  } catch (e) {
+    console.error('[ai]', e.code || '', e.message);
+    fail(res, e.code === 'NO_KEY' ? 400 : 502, e.message);
+  }
+});
+
 /* ---------- 团队 ---------- */
 route('GET', /^\/api\/users$/, async (req, res) => {
   const [rows] = await pool.query('SELECT id,email,name,role,created_at FROM profiles ORDER BY created_at ASC');
@@ -387,12 +416,37 @@ async function cli(args) {
     const [r] = await pool.query('UPDATE profiles SET pw_hash=? WHERE email=?', [hashPassword(pw), email.toLowerCase()]);
     await pool.query('DELETE FROM sessions WHERE user_id IN (SELECT id FROM profiles WHERE email=?)', [email.toLowerCase()]);
     console.log(r.affectedRows ? `${email} 密码已改` : '没找到这个邮箱');
+  } else if (cmd === 'aicheck') {
+    // 验证 ANTHROPIC_API_KEY 能不能用（会真的发一次最小请求，花费不到 1 分钱）
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('没配 ANTHROPIC_API_KEY。把它写进 ' + ENV_FILE + ' 再试');
+      await pool.end(); process.exit(1);
+    }
+    const kv = process.env.ANTHROPIC_API_KEY;
+    console.log('key 长度 ' + kv.length + ',开头 ' + kv.slice(0, 12) + '…(正常是 100 出头，太短说明粘贴时被截断了)');
+    try {
+      const AnthropicPkg = require('@anthropic-ai/sdk');
+      const Anthropic = AnthropicPkg.default || AnthropicPkg;
+      const c = new Anthropic({ apiKey: kv });
+      const r = await c.messages.create({
+        model: process.env.AI_MODEL || 'claude-opus-5-5',
+        max_tokens: 16,
+        messages: [{ role: 'user', content: '回复 ok 两个字母，不要别的' }],
+      });
+      const txt = (r.content.find(b => b.type === 'text') || {}).text || '';
+      console.log('调用成功,模型回了:' + JSON.stringify(txt.trim()));
+      console.log('用了 ' + r.usage.input_tokens + '+' + r.usage.output_tokens + ' token。AI 功能可用。');
+    } catch (e) {
+      console.error('调用失败:' + e.message);
+      if (/401|authentication/i.test(e.message)) console.error('多半是 key 不对或被截断了,重新写一次');
+      await pool.end(); process.exit(1);
+    }
   } else if (cmd === 'userlist') {
     const [rows] = await pool.query('SELECT email,name,role,created_at FROM profiles ORDER BY created_at');
     if (!rows.length) console.log('(还没有账号)');
     rows.forEach(u => console.log(`${u.role.padEnd(6)} ${u.email}  ${u.name || ''}`));
   } else {
-    console.error('可用命令: useradd / userrole / passwd / userlist');
+    console.error('可用命令: useradd / userrole / passwd / userlist / aicheck');
     process.exit(1);
   }
   await pool.end();
