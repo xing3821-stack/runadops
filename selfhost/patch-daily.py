@@ -24,6 +24,12 @@ s = io.open(p, encoding="utf-8").read()
 if "viewDailies" in s:
     print("Already patched, nothing to do."); raise SystemExit
 
+# 这个补丁建在 CPA/ROAS 那个之上（要用到它加的 conversions / revenue 字段）
+if "function roas(" not in s:
+    print("ABORTED: 先跑 patch-metrics.py（这个补丁要用它加的转化数/转化价值字段）")
+    print("  python3 patch-metrics.py " + p)
+    raise SystemExit(1)
+
 E = []
 
 # ---- 1. 类型表 + state ----
