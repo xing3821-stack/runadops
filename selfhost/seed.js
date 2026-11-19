@@ -74,6 +74,49 @@ const PACKAGES = [
   },
 ];
 
+
+/* ---------------- 周期套餐(按天数 × 平台组合) ----------------
+   用 `node seed.js --plans` 写进去。价格是参考值,进控制台按自己的成本改。
+   包含服务里只写我们真正交付的东西:素材、投放、监控、报表。 */
+const PLANS = [
+  {
+    name: 'FB + IG · 7 天', billing: '周期套餐', price: 138, period: '7 天',
+    platforms: ['Facebook', 'Instagram'],
+    includes: '账户与受众配置\n素材 2 条(AI 口播或实拍剪辑)\n投放期内每日优化\n结束出一份数据小结',
+    desc: '短周期试水档。适合新客户先跑一轮看数据再谈长期。7 天跑完给 CPA / ROAS 结论。',
+  },
+  {
+    name: 'FB + IG · 30 天', billing: '周期套餐', price: 328, period: '30 天',
+    platforms: ['Facebook', 'Instagram'],
+    includes: '账户与受众配置\n素材 8 条\nA/B 测试排期\n每日优化 + 周报\n月末复盘与下月建议',
+    desc: '单平台常规档。相当于 7 天档的 4 倍周期但只收 2.4 倍价格,引导客户选长周期。',
+  },
+  {
+    name: 'TikTok · 7 天', billing: '周期套餐', price: 248, period: '7 天',
+    platforms: ['TikTok'],
+    includes: '账户与受众配置\n竖版短视频 3 条\n投放期内每日优化\n结束出一份数据小结',
+    desc: 'TikTok 比 Meta 贵在素材:纯图文跑不动,每条都要视频,所以同周期价格更高。',
+  },
+  {
+    name: 'TikTok · 30 天', billing: '周期套餐', price: 638, period: '30 天',
+    platforms: ['TikTok'],
+    includes: '账户与受众配置\n竖版短视频 12 条\n素材轮换排期\n每日优化 + 周报\n月末复盘与下月建议',
+    desc: 'TikTok 常规档。素材消耗快,衰减明显,所以按条数承诺产出而不是按时长。',
+  },
+  {
+    name: '全平台打包 · 7 天', billing: '周期套餐', price: 328, period: '7 天',
+    platforms: ['Facebook', 'Instagram', 'TikTok'],
+    includes: '三平台账户与受众配置\n素材 5 条(含竖版视频 3 条)\n跨平台预算调配\n投放期内每日优化\n结束出一份对比小结(哪个平台更适合这个品)',
+    desc: '打包比单买 FB+IG(138)加 TikTok(248)省 58。卖点是跨平台对比:一周就知道这个品该主攻哪边。',
+  },
+  {
+    name: '全平台打包 · 30 天', billing: '周期套餐', price: 828, period: '30 天',
+    platforms: ['Facebook', 'Instagram', 'TikTok'],
+    includes: '三平台账户与受众配置\n素材 20 条(含竖版视频 12 条)\n跨平台预算动态调配\n每日优化 + 周报\n月末复盘 + 下月投放方案',
+    desc: '主推档。打包比单买(328 + 638 = 966)省 138。谈客户时先报这档,再用短周期档做台阶。',
+  },
+];
+
 /* ---------------- 投放配置模板 ----------------
    字段取值必须用控制台下拉里的原词,不然界面显示不出来:
      vertical  : SEO / 独立站·网购 / 盲盒 / 其他
@@ -189,10 +232,13 @@ const uuid = () => crypto.randomUUID();
   }));
 
   const refresh = process.argv.includes('--refresh');
+  if (process.argv.includes('--plans')) console.log('--plans:把按天数 × 平台组合的周期套餐也写进去\n');
   if (refresh) console.log('--refresh:同名的会被改写成最新内容(你在界面上改过的会丢)\n');
 
   let added = 0, skipped = 0, updated = 0;
-  for (const [type, list, key] of [['package', PACKAGES, 'name'], ['brief', BRIEFS, 'project']]) {
+  const sets = [['package', PACKAGES, 'name'], ['brief', BRIEFS, 'project']];
+  if (process.argv.includes('--plans')) sets.push(['package', PLANS, 'name']);
+  for (const [type, list, key] of sets) {
     for (const data of list) {
       if (have.has(type + ':' + data[key])) {
         if (refresh) {
