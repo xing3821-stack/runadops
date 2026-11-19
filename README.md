@@ -31,6 +31,30 @@
 
 一句话:线上版的**投放方案库和概览**是 `console-v2` 没有的,`console-v2` 的**收款明细、CSV 导出、分页**是线上版没有的。要合并的话,建议以线上版为底座往里加,而不是整体替换。
 
+⚠ **两版的 `config.js` 不通用**:线上版读 `window.CONFIG`,`console-v2` 读 `window.RUNADOPS_CONFIG`。
+换版本时忘了一起换配置文件,页面会报「还没配置后端」。
+
+## deployed/index.fixed.html:线上版的三个修复
+
+`deployed/index.fixed.html` 是在线上版基础上改了 3 处(diff 只有 3 个 hunk,其余一字未动):
+
+| 改了什么 | 不改会怎样 | 验证结果 |
+|---|---|---|
+| 备份文件名 `操盘控制台备份_…` → `runadops-backup-…` | Chromium 丢弃带中文的 `download` 文件名 | 原版存成 `download`(无扩展名),修订版正常 |
+| `records` 查询加 `.range()` 分页 | Supabase 默认只返回 1000 行,多的静默丢 | 库里 1500 条:原版只加载 1000,修订版 1500 全到 |
+| 锁定 `supabase-js@2.119.1` + unpkg 备用源 | jsdelivr 一挂页面打不开;upstream 发破坏性 2.x 也可能白屏 | 掐断 jsdelivr:原版白屏报错,修订版自动走 unpkg 正常 |
+
+2.119.1 就是现在线上 `@2` 解析到的版本,锁版本不改变当前行为。
+三项都用假 Supabase 后端在 Chromium 里实测过,不是推断。
+
+要上线这个修订版:
+
+```bash
+scp deployed/index.fixed.html root@139.180.210.215:/var/www/runadops/index.html
+```
+
+出问题就用 `deployed/index.html`(原始快照)传回去回滚。
+
 ## 更新线上控制台
 
 传上去、刷新网页就生效,不用重启 nginx:
@@ -51,7 +75,7 @@ ssh root@139.180.210.215 "head -3 /var/www/runadops/index.html; ls -l /var/www/r
 
 ## 还没做完的事
 
-线上 `config.js` 里的 Supabase URL 还是占位符(`abcd.supabase.co`),anon key 没填,所以**后端还没接上,库里没有任何数据**。接法见 `docs/部署与运维手册.md` 第 3 节:
+线上 `config.js` 还是原封不动的模板(`SUPABASE_URL: "在此粘贴你的 Project URL"`),所以**后端还没接上,库里没有任何数据**。接法见 `docs/部署与运维手册.md` 第 3 节:
 
 1. Supabase → SQL Editor → 跑 `supabase/schema.sql`
 2. Project Settings → API → 复制 Project URL 和 anon public key

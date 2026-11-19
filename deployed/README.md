@@ -18,3 +18,24 @@
    而且只有 jsdelivr 一个源,连不上就打不开。
 
 改之前先把这份快照留着,方便回滚。
+
+## index.fixed.html
+
+上面三个问题的修订版,只改了 3 处,其余与 `index.html` 完全一致
+(`diff -u index.html index.fixed.html` 只有 3 个 hunk)。
+
+实测结果(假 Supabase 后端 + Chromium):
+
+| | 原版 | 修订版 |
+|---|---|---|
+| 库里 1500 条记录 | 只加载 1000 条,界面无提示 | 1500 条全部加载 |
+| 点「备份」 | 存成无扩展名的 `download` | `runadops-backup-2026-11-19.json` |
+| jsdelivr 不可达 | 白屏,`window.supabase` undefined,控制台报错 | 自动走 unpkg,正常进登录页 |
+
+锁定的 2.119.1 就是现在线上 `@2` 解析到的版本,所以锁版本本身不改变行为。
+
+上线:`scp index.fixed.html root@139.180.210.215:/var/www/runadops/index.html`
+回滚:`scp index.html root@139.180.210.215:/var/www/runadops/index.html`
+
+另:线上版读的配置全局变量是 `window.CONFIG`,而 `console-v2/` 读的是
+`window.RUNADOPS_CONFIG`,两边的 config.js 不能互换。
