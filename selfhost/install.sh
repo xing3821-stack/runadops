@@ -4,9 +4,11 @@
 set -e
 cd "$(dirname "$0")"
 
-DB_NAME=runadops
-DB_USER=runadops
-PORT=8788
+# 可被外面的环境变量覆盖（deploy.sh 会传）
+DB_NAME=${DB_NAME:-runadops}
+DB_USER=${DB_USER:-runadops}
+PORT=${PORT:-8788}
+ORIGINS=${ORIGINS:-https://runadops.com,https://www.runadops.com}
 
 echo "== 1/5 建库建表 =="
 mysql < schema.sql
@@ -31,7 +33,7 @@ DB_HOST=127.0.0.1
 DB_USER=${DB_USER}
 DB_PASS=${DB_PASS}
 DB_NAME=${DB_NAME}
-ORIGINS=https://runadops.com,https://www.runadops.com
+ORIGINS=${ORIGINS}
 SESSION_DAYS=30
 ENVEOF
 chmod 600 .env
@@ -51,7 +53,9 @@ echo
 echo "== 自检 =="
 curl -sS "http://127.0.0.1:${PORT}/api/health" && echo
 curl -sS "http://127.0.0.1:${PORT}/api/auth/state" && echo
-echo
-echo "后端装好了。接下来还差两步:"
-echo "  1) nginx 里把 /api/ 转发到 127.0.0.1:${PORT}"
-echo "  2) 把 shim.js 和改过的 index.html 放进 /var/www/runadops/"
+if [ -z "${DEPLOY_WRAPPED:-}" ]; then
+  echo
+  echo "后端装好了。接下来还差两步:"
+  echo "  1) nginx 里把 /api/ 转发到 127.0.0.1:${PORT}"
+  echo "  2) 把 shim.js 和改过的 index.html 放进 ${WEB_DIR:-/var/www/runadops}/"
+fi

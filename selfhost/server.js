@@ -27,8 +27,10 @@ const mysql = require('mysql2/promise');
 const ENV_FILE = path.join(__dirname, '.env');
 if (fs.existsSync(ENV_FILE)) {
   for (const line of fs.readFileSync(ENV_FILE, 'utf8').split('\n')) {
+    // .env 说了算，覆盖继承来的环境变量。
+    // 否则 pm2 会一直沿用首次启动时的那份 env，改了 .env 重启也不生效。
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+    if (m) process.env[m[1]] = m[2];
   }
 }
 const CFG = {

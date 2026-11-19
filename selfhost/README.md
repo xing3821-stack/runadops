@@ -19,12 +19,20 @@
 
 ## 安装
 
+一条命令装完(建库、建账号、写配置、pm2 拉起、配 nginx、切前端、自检):
+
 ```bash
-mkdir -p /opt/runadops-api && cd /opt/runadops-api   # 代码放这里
-bash install.sh
+bash deploy.sh
 ```
 
-然后 nginx 在 `runadops.com` 的 443 server 块里加:
+每一步都先备份,失败就停下并告诉你怎么还原;nginx 改完先 `nginx -t`,
+不通过自动还原配置,网站不会受影响。只动 `/opt/runadops-api`、
+`/var/www/runadops/` 和 `sites-available/runadops.com` 这三处。
+
+想分步来也行:`install.sh` 只装后端,`nginx-add-api.py` 只改 nginx,
+`patch-console.py` 只切前端。
+
+deploy.sh 会自动加下面这段;要手工加也可以,在 `runadops.com` 的 443 server 块里:
 
 ```nginx
 location /api/ {
@@ -82,3 +90,11 @@ echo '0 4 * * * root mysqldump --single-transaction runadops | gzip > /var/backu
 改库后界面 10 秒内自动同步、备份导出、密码错误拒绝登录、
 member 调接口删除被 403 挡住、member 不能提权、未登录读不到数据(401)、
 1502 条记录分页全部拉到、全程无 JS 报错。
+
+## 两个踩过的坑(已修)
+
+- **pm2 会记住首次启动时的环境变量**,后来改 `.env` 再 `pm2 restart` 不生效。
+  所以 `server.js` 改成 `.env` 文件优先,覆盖继承来的变量。
+- **CSRF 来源检查**:改数据的请求必须带本站 Origin。`.env` 里的 `ORIGINS`
+  要和实际访问的域名一致,不然会报「来源不对」。deploy.sh 会自动写成
+  `https://runadops.com,https://www.runadops.com`。
