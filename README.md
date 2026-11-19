@@ -6,7 +6,7 @@
 
 | 目录 | 是什么 | 要不要动 |
 |---|---|---|
-| `deployed/` | **线上正在跑的那版**,2026-11-19 从 runadops.com 抓下来的快照 | 这是权威版本,更新线上就用它 |
+| `deployed/` | **线上那版**。`index.fixed.html` = 现在线上跑的;`index.html` = 修订前原版(回滚用) | 这是权威版本,更新线上就用它 |
 | `console-v2/` | 按《部署与运维手册》重写的一版,尚未上线 | 候选版本,功能范围和线上版不一样,见下 |
 | `supabase/schema.sql` | 建表脚本(两版通用) | 在 Supabase SQL Editor 里跑一次 |
 | `docs/` | 部署与运维手册 | |
@@ -47,13 +47,17 @@
 2.119.1 就是现在线上 `@2` 解析到的版本,锁版本不改变当前行为。
 三项都用假 Supabase 后端在 Chromium 里实测过,不是推断。
 
-要上线这个修订版:
+**已于 2026-11-19 14:28 上线**,用的是服务器上就地修订(不传文件):
 
 ```bash
-scp deployed/index.fixed.html root@139.180.210.215:/var/www/runadops/index.html
+ssh root@139.180.210.215 'cd /var/www/runadops && python3 patch-live.py index.html'
 ```
 
-出问题就用 `deployed/index.html`(原始快照)传回去回滚。
+(`patch-live.py` 的内容见 `deployed/patch-live.py`,纯 ASCII,可直接粘进 SSH 会话;
+认不出版本就中止不改,自动留 `.bak`,重复执行安全。)
+
+上线后已从公网抓回核对:线上文件与 `deployed/index.fixed.html` **字节完全一致**,
+真实浏览器打开零 JS 报错。回滚:`cp index.html.bak index.html`。
 
 ## 更新线上控制台
 
