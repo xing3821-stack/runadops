@@ -1,84 +1,72 @@
 # runadops · 操盘控制台
 
-推广代运营用的内部控制台:**客户 / 投放配置 / 投放项目 / 收款 / 套餐**。全员各自邮箱登录,看同一套数据。
+推广代运营用的内部控制台,线上地址 <https://runadops.com>,放在 Vultr 服务器的 `/var/www/runadops/`,数据存 Supabase。
 
-- 前端:一个 `index.html`,放在自己的 Vultr 服务器(nginx),不需要构建、不需要 node
-- 后端:Supabase(Auth 管登录,Postgres 存数据,Realtime 做多人同步)
-- 线上:<https://runadops.com>
+**这个仓库里有两个版本的控制台,别搞混:**
 
-## 文件
+| 目录 | 是什么 | 要不要动 |
+|---|---|---|
+| `deployed/` | **线上正在跑的那版**,2026-11-19 从 runadops.com 抓下来的快照 | 这是权威版本,更新线上就用它 |
+| `console-v2/` | 按《部署与运维手册》重写的一版,尚未上线 | 候选版本,功能范围和线上版不一样,见下 |
+| `supabase/schema.sql` | 建表脚本(两版通用) | 在 Supabase SQL Editor 里跑一次 |
+| `docs/` | 部署与运维手册 | |
 
-| 文件 | 作用 |
-|---|---|
-| `index.html` | 控制台本体(约 46KB,单文件,自带样式和逻辑) |
-| `config.js` | 只放 Supabase `Project URL` + `anon public` key |
-| `supabase/schema.sql` | 建表脚本,在 Supabase SQL Editor 里跑一次 |
+在抓快照之前,这个仓库是空的,线上那份控制台没有任何版本记录——现在有了。
 
-## 第一次部署
+## 两版的差别
 
-1. **建库**:Supabase → SQL Editor → New query → 粘贴 `supabase/schema.sql` 全文 → Run。
-2. **传文件**到服务器 `/var/www/runadops/`:
+两版都用同一套后端:`profiles`(账号角色)+ `records`(`type` + `jsonb` 存全部业务数据),都用 Supabase Auth 登录、realtime 同步。但模块划分不一样,**互不读取对方的数据**:
+
+| | `deployed/`(线上) | `console-v2/` |
+|---|---|---|
+| 模块 | 概览 / 客户 / 投放项目 / 投放配置 / 收款 / 套餐 / 团队 | 客户 / 投放配置 / 投放项目 / 收款 / 套餐 |
+| record type | `client` `campaign` `payment` `package` `brief` `settings` | `client` `project` `payment` `package` `settings` |
+| 「投放配置」是什么 | **投放方案库**:按品类存 目标 / 主渠道 / 目标市场 / 受众定向 / 兴趣词 / 投放节奏 / 欢迎语 / 文案 / 素材方向,带预设模板 | 下拉选项维护页:平台、目标、出价方式、收款方式等 10 组选项 |
+| 客户关联方式 | `clientId` 存 id,改名不断链 | 存客户名称字符串,改名要同步改 |
+| 项目字段 | 总预算 + **已花费**,账户就绪确认(是否用客户自己的户) | 日预算、出价方式、广告户、素材类型 |
+| 收款字段 | 6 个(客户/类型/状态/金额/日期/备注) | 10 个(加 币种 / 收款方式 / 关联项目 / 套餐 / 服务周期) |
+| 统计 | 概览页 | 收款页合计(已收/待收/本月)、项目页在投预算合计 |
+| 导出 | 备份 JSON | 备份 JSON + 各模块 CSV(带 BOM) |
+| 大数据量 | `select('*')` 不分页,超 1000 行会被静默截断 | 分页拉取 |
+
+一句话:线上版的**投放方案库和概览**是 `console-v2` 没有的,`console-v2` 的**收款明细、CSV 导出、分页**是线上版没有的。要合并的话,建议以线上版为底座往里加,而不是整体替换。
+
+## 更新线上控制台
+
+传上去、刷新网页就生效,不用重启 nginx:
 
 ```bash
-scp index.html config.js root@139.180.210.215:/var/www/runadops/
+scp deployed/index.html root@139.180.210.215:/var/www/runadops/index.html
 ```
 
-3. **填密钥**(在服务器上改,`Project Settings → API` 里复制):
+`config.js` 里有线上密钥(目前还是占位符),**日常只传 `index.html`**,别顺手把仓库里的占位 `config.js` 覆盖上去。
+
+传完核对一下传对了没有(手册第 5 节那个老问题):
 
 ```bash
-ssh root@139.180.210.215 'nano /var/www/runadops/config.js'
+ssh root@139.180.210.215 "head -3 /var/www/runadops/index.html; ls -l /var/www/runadops/"
 ```
 
-4. 打开 <https://runadops.com> 按 Ctrl+F5 → 用邮箱**注册**(第一个注册的人自动是 owner)→ 进「投放配置」点「载入预设」→ 点「保存配置」。
-5. 回 Supabase → Authentication → 关掉公开注册,之后用邮箱邀请队友。
+第 2 行应该是 `<html lang="zh-CN">`。
 
-## 日常更新控制台
+## 还没做完的事
 
-改完 `index.html`,传上去、刷新网页就生效,不用重启 nginx:
+线上 `config.js` 里的 Supabase URL 还是占位符(`abcd.supabase.co`),anon key 没填,所以**后端还没接上,库里没有任何数据**。接法见 `docs/部署与运维手册.md` 第 3 节:
 
-```bash
-scp index.html root@139.180.210.215:/var/www/runadops/index.html
-```
-
-`config.js` 里有线上密钥,**日常只传 `index.html`**,别顺手把仓库里的占位 `config.js` 覆盖上去。
-
-## 怎么用
-
-- **投放配置**:这一页定义其他页面所有下拉框的选项(平台、投放目标、出价方式、收费方式、收款方式、状态…)。「载入预设」填入一套常用默认值,**点「保存配置」才真正写进数据库**,改完全团队立刻生效。
-- **套餐 → 客户 → 投放项目 → 收款**:建议按这个顺序建。客户的套餐、项目的客户、收款的客户/项目,都是从已有数据里选,不用手打。
-- **收款**只记我们的服务费/管理费,不记客户账户里的广告消耗;投放项目里的「日预算」才是客户户的消耗预算,「广告户」一律填客户自有户。
-- **备份**(左下角):把全部数据导出成一个 JSON 存档。每个列表页右上角还能导出当前筛选结果的 CSV(带 BOM,Excel 双击不乱码)。
-- 快捷键:`n` 新建、`/` 跳到搜索框。
+1. Supabase → SQL Editor → 跑 `supabase/schema.sql`
+2. Project Settings → API → 复制 Project URL 和 anon public key
+3. `nano /var/www/runadops/config.js` 填进去
+4. Ctrl+F5 刷新 → 注册(第一个注册的人自动是 owner)
+5. 回 Supabase → Authentication 关掉公开注册,之后用邮箱邀请队友
 
 ## 权限
 
-角色在 Supabase → Table Editor → `profiles` → `role` 里改,三种:`owner` / `admin` / `member`。
+角色在 Supabase → Table Editor → `profiles` → `role` 改:`owner` / `admin` / `member`。owner/admin 能删,member 不能。
 
-- owner / admin:能增、能改、能删
-- member:能增、能改,删除按钮是灰的(防手滑)
-
-⚠ **这条限制目前只在界面层**:`schema.sql` 默认的 `records_all_auth` 策略允许任何登录用户删除,会用 API 的人绕得过去。要把它变成数据库级规则,把 `supabase/schema.sql` 末尾「可选加固」那一段取消注释后在 SQL Editor 跑一次(同时会禁止成员自己改自己的角色)。
-
-## 离线 / CDN 打不开
-
-`index.html` 从 CDN 加载 supabase-js(jsdelivr,失败自动换 unpkg)。如果办公网连不上这两个 CDN,把这个文件下载后放到网站同目录即可自动改用本地版:
-
-```bash
-curl -o supabase.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js
-scp supabase.js root@139.180.210.215:/var/www/runadops/supabase.js
-```
-
-## 数据怎么存的
-
-两张表(详见 `supabase/schema.sql`):
-
-- `profiles` — 账号与角色,由注册触发器自动建档,第一个注册的人是 owner
-- `records` — 全部业务数据,`type` 区分种类(`client` / `package` / `project` / `payment` / `settings`),`data` 是 jsonb
-
-加字段不用改数据库:在 `index.html` 的 `MODULES` 里给对应模块的 `fields` 加一项即可,表单、表格、CSV 导出都会自动跟上。
+⚠ 这条限制**只在界面层**:`schema.sql` 默认的 `records_all_auth` 策略允许任何登录用户删除,会用 API 的人绕得过去。要变成数据库级规则,把 `supabase/schema.sql` 末尾「可选加固」那段取消注释后跑一次(同时会禁止成员自己改自己的角色)。
 
 ## 安全
 
-- `anon` key 可以公开(安全靠数据库 RLS),**不要**把数据库密码或 `service_role` key 放进前端或这个仓库。
-- 服务器 root 密码、Supabase 账号密码存自己的密码管理器,不要写进仓库。
-- 同一台服务器上还有别的站点,运维时只动 `/var/www/runadops/` 和 `sites-available/runadops.com`;改 nginx 永远先 `nginx -t` 再 `systemctl reload nginx`。
+- `anon` key 可以公开(安全靠 RLS),**不要**把数据库密码或 `service_role` key 放进前端或这个仓库。
+- 服务器 root 密码、Supabase 账号存密码管理器,不要写进仓库,也不要贴进聊天窗口。
+- 同一台服务器上还有 nova323.com 等别的站点,运维只动 `/var/www/runadops/` 和 `sites-available/runadops.com`;改 nginx 永远先 `nginx -t` 再 `systemctl reload nginx`。

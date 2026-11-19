@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推广代运营 · 操盘控制台</title>
+<style>
+  :root{
+    --bg:#0b0e14; --surface:#141922; --surface2:#1b2230; --surface3:#222b3b;
+    --border:#2a3344; --border2:#374358;
+    --text:#e8ecf3; --muted:#8d97a8; --muted2:#656f80;
+    --accent:#2dd4a7; --accent-dim:rgba(45,212,167,.13); --accent-text:#7ff0d2;
+    --amber:#f5b547; --amber-dim:rgba(245,181,71,.13);
+    --blue:#5b8def; --blue-dim:rgba(91,141,239,.14);
+    --violet:#a98bf5; --violet-dim:rgba(169,139,245,.14);
+    --red:#f0706e; --red-dim:rgba(240,112,110,.13);
+    --radius:14px; --radius-sm:9px; --shadow:0 6px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  /* login */
+  .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .login-card{background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:34px 30px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+  .login-card .brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:720;margin-bottom:4px}
+  .login-card .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .login-card .sub{font-size:12.5px;color:var(--muted2);margin-bottom:24px}
+  .login-card label{font-size:12px;color:var(--muted);display:block;margin:14px 0 6px}
+  .login-card input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none}
+  .login-card input:focus{border-color:var(--accent)}
+  .login-btns{display:flex;gap:10px;margin-top:22px}
+  .login-btns .btn{flex:1}
+  .login-msg{font-size:12.5px;margin-top:14px;min-height:18px;color:var(--amber);line-height:1.5}
+  .cfg-warn{background:var(--amber-dim);border:1px solid var(--amber);color:var(--amber);border-radius:10px;padding:13px 15px;font-size:12.5px;line-height:1.6;margin-top:16px}
+  /* app */
+  .app{display:flex;min-height:100vh}
+  .sidebar{width:216px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .brand{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+  .brand h1{font-size:15px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:9px}
+  .brand h1 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .brand p{font-size:11px;color:var(--muted2);margin-top:4px;padding-left:18px}
+  .nav{padding:10px;flex:1;overflow:auto}
+  .nav button{width:100%;text-align:left;background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 12px;border-radius:var(--radius-sm);font-size:13.5px;margin-bottom:2px;display:flex;align-items:center;gap:11px;font-family:inherit;transition:.14s}
+  .nav button:hover{background:var(--surface2);color:var(--text)}
+  .nav button.active{background:var(--accent-dim);color:var(--accent-text);font-weight:600}
+  .nav button .ic{width:17px;text-align:center;font-size:15px}
+  .nav button .ct{margin-left:auto;font-size:11px;color:var(--muted2);background:var(--surface2);padding:1px 7px;border-radius:20px}
+  .nav button.active .ct{background:rgba(45,212,167,.2);color:var(--accent-text)}
+  .side-foot{padding:12px;border-top:1px solid var(--border)}
+  .who{font-size:12px;color:var(--muted);padding:4px 4px 10px;line-height:1.4}
+  .who b{color:var(--text);font-weight:600}
+  .who .role{display:inline-block;font-size:10px;padding:1px 7px;border-radius:20px;background:var(--surface2);color:var(--muted2);margin-left:5px}
+  .foot-btns{display:flex;gap:7px}
+  .foot-btns button{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:7px;border-radius:8px;cursor:pointer;font-size:11.5px;font-family:inherit;transition:.14s}
+  .foot-btns button:hover{border-color:var(--border2);color:var(--text)}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{padding:17px 26px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;position:sticky;top:0;background:rgba(11,14,20,.82);backdrop-filter:blur(10px);z-index:20}
+  .topbar h2{font-size:17px;font-weight:650}
+  .topbar .sub{font-size:12px;color:var(--muted2);margin-top:1px}
+  .topbar .spacer{flex:1}
+  .search{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:8px 12px;color:var(--text);font-size:13px;width:210px;font-family:inherit;outline:none}
+  .search:focus{border-color:var(--accent)}
+  .btn{background:var(--accent);color:#06231c;border:none;padding:9px 15px;border-radius:9px;font-weight:650;cursor:pointer;font-size:13px;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:.14s}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+  .btn.ghost:hover{border-color:var(--border2)}
+  .content{padding:24px 26px 60px;max-width:1200px;width:100%}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:17px 18px;position:relative;overflow:hidden}
+  .kpi .lbl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .kpi .val{font-size:27px;font-weight:730;margin-top:9px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .kpi .val small{font-size:14px;font-weight:600;color:var(--muted);margin-left:3px}
+  .kpi .meta{font-size:11.5px;color:var(--muted2);margin-top:5px}
+  .kpi .bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+  .kpi.amber .bar{background:var(--amber)}.kpi.blue .bar{background:var(--blue)}.kpi.violet .bar{background:var(--violet)}
+  .kpi.amber .val{color:var(--amber)}
+  .prow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:860px){.prow{grid-template-columns:1fr}}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .panel-h{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .panel-h h3{font-size:13.5px;font-weight:650}
+  .panel-h .spacer{flex:1}
+  .panel-b{padding:6px 0}
+  .mini{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border)}
+  .mini:last-child{border-bottom:none}
+  .mini .nm{font-weight:600;font-size:13px}
+  .mini .sb{font-size:11.5px;color:var(--muted2);margin-top:2px}
+  .mini .rt{margin-left:auto;text-align:right}
+  .mini .amt{font-weight:680;font-variant-numeric:tabular-nums}
+  .progress{height:5px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:6px;width:120px}
+  .progress i{display:block;height:100%;background:var(--accent);border-radius:4px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:12px 16px;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface)}
+  td{padding:13px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tbody tr.clk{cursor:pointer;transition:.12s}
+  tbody tr.clk:hover{background:var(--surface2)}
+  .cell-main{font-weight:600}
+  .cell-sub{font-size:11.5px;color:var(--muted2);margin-top:2px}
+  .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .p-green{background:var(--accent-dim);color:var(--accent-text)}
+  .p-amber{background:var(--amber-dim);color:var(--amber)}
+  .p-blue{background:var(--blue-dim);color:var(--blue)}
+  .p-red{background:var(--red-dim);color:var(--red)}
+  .p-gray{background:var(--surface3);color:var(--muted)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;background:var(--surface3);color:var(--muted);margin:1px 2px 1px 0}
+  .tag.b{background:var(--blue-dim);color:var(--blue)}
+  .ready{display:inline-flex;gap:4px}
+  .chk{width:19px;height:19px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:800}
+  .chk.on{background:var(--accent-dim);color:var(--accent-text)}
+  .chk.off{background:var(--surface3);color:var(--muted2)}
+  .empty{padding:48px 20px;text-align:center;color:var(--muted2)}
+  .empty .big{font-size:34px;margin-bottom:10px;opacity:.5}
+  .empty p{font-size:13px;margin-bottom:16px}
+  .overlay{position:fixed;inset:0;background:rgba(5,7,11,.6);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:40px 16px;overflow:auto}
+  .overlay.show{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:540px;box-shadow:var(--shadow);animation:pop .18s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-h{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center}
+  .modal-h h3{font-size:16px;font-weight:680}
+  .modal-h .x{margin-left:auto;background:var(--surface2);border:none;color:var(--muted);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:17px}
+  .modal-h .x:hover{color:var(--text)}
+  .modal-b{padding:20px 22px;max-height:62vh;overflow:auto}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:12px;color:var(--muted);font-weight:550}
+  .field input,.field select,.field textarea{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;transition:.14s;width:100%}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:var(--surface3)}
+  .field textarea{resize:vertical;min-height:62px}
+  .chkrow{display:flex;flex-wrap:wrap;gap:8px}
+  .chkbox{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);padding:8px 12px;border-radius:9px;cursor:pointer;font-size:12.5px;user-select:none;transition:.14s}
+  .chkbox:hover{border-color:var(--border2)}
+  .chkbox.on{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-text);font-weight:600}
+  .chkbox input{display:none}
+  .modal-f{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center}
+  .modal-f .del{background:none;border:none;color:var(--red);cursor:pointer;font-size:12.5px;font-family:inherit}
+  .modal-f .del:hover{text-decoration:underline}
+  .modal-f .spacer{flex:1}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:11px 20px;border-radius:10px;font-size:13px;font-weight:550;opacity:0;transition:.25s;z-index:200;box-shadow:var(--shadow);pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .section-note{font-size:12px;color:var(--muted2);margin-bottom:16px;line-height:1.6;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:9px;padding:12px 15px}
+  .pkgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .pkg{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:.14s;position:relative}
+  .pkg:hover{border-color:var(--border2);transform:translateY(-2px)}
+  .pkg .pn{font-size:14.5px;font-weight:680}
+  .pkg .pp{font-size:24px;font-weight:750;margin:10px 0 3px;color:var(--accent-text);font-variant-numeric:tabular-nums}
+  .pkg .pb{font-size:11.5px;color:var(--muted2)}
+  .pkg .pd{font-size:12.5px;color:var(--muted);margin-top:11px;line-height:1.55}
+  .briefs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.briefs{grid-template-columns:1fr}}
+  .brief{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 17px;cursor:pointer;transition:.14s}
+  .brief:hover{border-color:var(--border2);transform:translateY(-2px)}
+  .brief-h{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
+  .bp-name{font-size:15px;font-weight:680}
+  .bp-sub{font-size:11.5px;color:var(--muted2);margin-top:2px}
+  .brief-h .pill{margin-left:auto}
+  .brief-row{display:flex;gap:10px;font-size:12.5px;margin:5px 0}
+  .brief-row .k{color:var(--muted2);flex-shrink:0;width:34px}
+  .brief-row .v{color:#d4dae4}
+  .brief-ints{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px}
+  @media(max-width:720px){
+    .app{flex-direction:column}
+    .sidebar{width:100%;height:auto;position:static}
+    .nav{display:flex;flex-wrap:wrap;padding:8px;gap:4px}
+    .nav button{width:auto}.nav button .ct{display:none}
+    .search{width:140px}.fgrid{grid-template-columns:1fr}
+    .content{padding:18px 16px 50px}.topbar{padding:14px 16px}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="login-wrap" style="display:none">
+  <div class="login-card">
+    <div class="brand"><span class="dot"></span> 操盘控制台</div>
+    <div class="sub">推广代运营 · 团队版</div>
+    <div id="loginBody">
+      <label>邮箱</label>
+      <input id="li_email" type="email" autocomplete="username" placeholder="you@example.com">
+      <label>密码</label>
+      <input id="li_pw" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth('login')">
+      <div class="login-btns">
+        <button class="btn" onclick="doAuth('login')">登录</button>
+        <button class="btn ghost" onclick="doAuth('signup')">注册</button>
+      </div>
+      <div class="login-msg" id="loginMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app" style="display:none">
+  <aside class="sidebar">
+    <div class="brand"><h1><span class="dot"></span> 操盘控制台</h1><p>推广代运营 · 团队版</p></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <div class="who" id="who">—</div>
+      <div class="foot-btns">
+        <button onclick="exportData()">↓ 备份</button>
+        <button onclick="logout()">退出登录</button>
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div><h2 id="pageTitle">概览</h2><div class="sub" id="pageSub"></div></div>
+      <div class="spacer"></div>
+      <input class="search" id="search" placeholder="搜索客户…" oninput="render()" style="display:none">
+      <button class="btn" id="addBtn" onclick="quickAdd()">+ 新增</button>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-h"><h3 id="modalTitle">编辑</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b" id="modalBody"></div>
+    <div class="modal-f"><button class="del" id="delBtn" onclick="deleteCurrent()" style="display:none">删除</button><div class="spacer"></div><button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveForm()">保存</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+/* ============ config / supabase ============ */
+const CFG=window.CONFIG||{};
+let supa=null, user=null, profile=null, rtChannel=null;
+const COLL_TYPE={clients:'client',campaigns:'campaign',payments:'payment',packages:'package',briefs:'brief'};
+const TYPE_COLL={client:'clients',campaign:'campaigns',payment:'payments',package:'packages',brief:'briefs'};
+let state={clients:[],campaigns:[],payments:[],packages:[],briefs:[],members:[],settings:{cur:'U'}};
+function uid(){return (window.crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));}
+const CUR=()=>state.settings.cur||'U';
+function $(id){return document.getElementById(id);}
+
+async function initApp(){
+  if(!CFG.SUPABASE_URL||!CFG.SUPABASE_ANON_KEY||/你的|YOUR_|xxxx/i.test(CFG.SUPABASE_URL+CFG.SUPABASE_ANON_KEY)){
+    showLogin(); $('loginBody').innerHTML='<div class="cfg-warn">⚠ 还没配置后端。请打开 <b>config.js</b>,填入你的 Supabase 项目 URL 和 anon key(见 DEPLOY.md 第 3 步),再刷新本页。</div>';
+    return;
+  }
+  supa=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY);
+  supa.auth.onAuthStateChange((_e,sess)=>handleSession(sess));
+  const {data:{session}}=await supa.auth.getSession();
+  handleSession(session);
+}
+async function handleSession(session){
+  if(session&&session.user){
+    user=session.user;
+    showApp();
+    await ensureProfile();
+    await loadAll();
+    subscribe();
+  }else{
+    user=null; profile=null;
+    if(rtChannel){try{supa.removeChannel(rtChannel);}catch(e){} rtChannel=null;}
+    showLogin();
+  }
+}
+function showLogin(){$('loginScreen').style.display='flex';$('app').style.display='none';}
+function showApp(){$('loginScreen').style.display='none';$('app').style.display='flex';}
+
+/* ============ auth ============ */
+async function doAuth(mode){
+  const email=$('li_email').value.trim(), pw=$('li_pw').value;
+  if(!email||!pw){loginMsg('请填邮箱和密码');return;}
+  loginMsg('处理中…');
+  let res;
+  try{
+    res=(mode==='signup')?await supa.auth.signUp({email,password:pw}):await supa.auth.signInWithPassword({email,password:pw});
+  }catch(e){loginMsg('出错:'+e.message);return;}
+  if(res.error){loginMsg(res.error.message);return;}
+  if(mode==='signup'&&!res.data.session){loginMsg('注册成功。如开启了邮箱验证,请查收邮件确认后再登录。');return;}
+  loginMsg('');
+}
+async function logout(){ await supa.auth.signOut(); }
+function loginMsg(m){$('loginMsg').textContent=m;}
+
+async function ensureProfile(){
+  let {data}=await supa.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(!data){
+    await supa.from('profiles').insert({id:user.id,email:user.email,name:(user.email||'').split('@')[0]});
+    const r=await supa.from('profiles').select('*').eq('id',user.id).maybeSingle(); data=r.data;
+  }
+  profile=data||{name:(user.email||'').split('@')[0],role:'member'};
+  renderAccount();
+}
+function renderAccount(){
+  const w=$('who'); if(!w||!profile)return;
+  w.innerHTML=`<b>${esc(profile.name||user.email)}</b><span class="role">${esc(profile.role||'member')}</span><br><span style="color:var(--muted2);font-size:11px">${esc(user.email)}</span>`;
+}
+function isAdmin(){return profile&&(profile.role==='owner'||profile.role==='admin');}
+
+/* ============ data layer ============ */
+async function loadAll(){
+  const {data,error}=await supa.from('records').select('*');
+  if(error){toast('加载失败:'+error.message);return;}
+  const s={clients:[],campaigns:[],payments:[],packages:[],briefs:[],members:state.members||[],settings:{cur:'U'}};
+  (data||[]).forEach(r=>{
+    if(r.type==='settings'){s.settings={...s.settings,...(r.data||{})};}
+    else{const c=TYPE_COLL[r.type]; if(c)s[c].push({id:r.id,...(r.data||{})});}
+  });
+  state=s;
+  await loadMembers();
+  render();
+}
+async function loadMembers(){
+  const {data}=await supa.from('profiles').select('*').order('created_at',{ascending:true});
+  state.members=data||[];
+}
+function subscribe(){
+  if(rtChannel){try{supa.removeChannel(rtChannel);}catch(e){}}
+  rtChannel=supa.channel('rt-'+Math.random().toString(36).slice(2))
+    .on('postgres_changes',{event:'*',schema:'public',table:'records'},()=>{loadAll();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},()=>{loadMembers().then(render);})
+    .subscribe();
+}
+async function recInsert(type,id,data){const {error}=await supa.from('records').insert({id,type,data,updated_by:user.id});if(error)toast('保存失败:'+error.message);}
+async function recUpdate(id,data){const {error}=await supa.from('records').update({data,updated_at:new Date().toISOString(),updated_by:user.id}).eq('id',id);if(error)toast('更新失败:'+error.message);}
+async function recDelete(id){const {error}=await supa.from('records').delete().eq('id',id);if(error)toast('删除失败:'+error.message);}
+
+/* ============ nav / tabs ============ */
+const TABS=[
+  {id:'overview',name:'概览',ic:'◉'},
+  {id:'clients',name:'客户',ic:'◆',coll:'clients'},
+  {id:'briefs',name:'投放配置',ic:'✦',coll:'briefs'},
+  {id:'campaigns',name:'投放项目',ic:'▲',coll:'campaigns'},
+  {id:'payments',name:'收款',ic:'$',coll:'payments'},
+  {id:'packages',name:'套餐报价',ic:'≡',coll:'packages'},
+  {id:'team',name:'团队',ic:'◐'}
+];
+let current='overview';
+const VERTICALS=['SEO','独立站/网购','盲盒','其他'];
+const PLATFORMS=['Facebook','Instagram','TikTok','Google'];
+const C_STATUS=[['洽谈中','p-blue'],['在投','p-green'],['暂停','p-amber'],['结束','p-gray']];
+const CAMP_STATUS=[['进行中','p-green'],['暂停','p-amber'],['完成','p-gray']];
+const PAY_STATUS=[['待收','p-amber'],['已收','p-green']];
+const GOALS=['引流','转化/下单','获客留资','App下载','涨粉','其他'];
+const PAY_TYPES=['服务费','广告预充','建站费','其他'];
+const BILLINGS=['月费','一次性','按广告花费%'];
+const OBJECTIVES=['线索 Leads','转化 Conversions','消息 Messages','流量 Traffic','App 安装','涨粉 Engagement'];
+const CHANNELS=['CTWA (WhatsApp)','落地页 Landing','IG + ManyChat','Google 搜索','多渠道'];
+const BRIEF_STATUS=[['草稿','p-gray'],['在投','p-green'],['暂停','p-amber']];
+function pillClass(map,v){const f=map.find(x=>x[0]===v);return f?f[1]:'p-gray';}
+function fmt(n){n=Number(n)||0;return n.toLocaleString('en-US');}
+function clientName(id){const c=state.clients.find(x=>x.id===id);return c?c.name:'—';}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+
+function renderNav(){
+  $('nav').innerHTML=TABS.map(t=>{
+    const ct=t.coll?`<span class="ct">${(state[t.coll]||[]).length}</span>`:(t.id==='team'?`<span class="ct">${(state.members||[]).length}</span>`:'');
+    return `<button class="${current===t.id?'active':''}" onclick="go('${t.id}')"><span class="ic">${t.ic}</span>${t.name}${ct}</button>`;
+  }).join('');
+}
+function go(id){current=id;$('search').value='';render();}
+
+function render(){
+  ['clients','campaigns','payments','packages','briefs','members'].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[];});
+  renderNav();
+  const titles={overview:['概览','生意全局一眼看清'],clients:['客户','管好每一个接单客户'],briefs:['投放配置','每个项目的目标/受众/兴趣词/节奏/文案,一处配好'],campaigns:['投放项目','盯住每条广告的预算与进度'],payments:['收款','该收的钱别漏'],packages:['套餐报价','你对外的服务菜单'],team:['团队','谁能登录、各自什么角色']};
+  $('pageTitle').textContent=titles[current][0];
+  $('pageSub').textContent=titles[current][1];
+  $('search').style.display=current==='clients'?'block':'none';
+  $('addBtn').style.display=(current==='overview'||current==='team')?'none':'inline-flex';
+  const addLabels={clients:'+ 新增客户',briefs:'+ 新增配置',campaigns:'+ 新增投放',payments:'+ 记一笔收款',packages:'+ 新增套餐'};
+  $('addBtn').textContent=addLabels[current]||'+ 新增';
+  const el=$('content');
+  const V={overview:viewOverview,clients:viewClients,briefs:viewBriefs,campaigns:viewCampaigns,payments:viewPayments,packages:viewPackages,team:viewTeam};
+  el.innerHTML=(V[current]||viewOverview)();
+}
+
+/* ============ views ============ */
+function viewOverview(){
+  const cl=state.clients, activeC=cl.filter(c=>c.status==='在投').length, leads=cl.filter(c=>c.status==='洽谈中').length;
+  const run=state.campaigns.filter(c=>c.status==='进行中');
+  const mgBudget=run.reduce((s,c)=>s+(Number(c.budget)||0),0), mgSpent=run.reduce((s,c)=>s+(Number(c.spent)||0),0);
+  const received=state.payments.filter(p=>p.status==='已收').reduce((s,p)=>s+(Number(p.amount)||0),0);
+  const pending=state.payments.filter(p=>p.status==='待收').reduce((s,p)=>s+(Number(p.amount)||0),0);
+  const recvFee=state.payments.filter(p=>p.status==='已收'&&p.type==='服务费').reduce((s,p)=>s+(Number(p.amount)||0),0);
+  const kpis=`<div class="kpis">
+    <div class="kpi"><div class="bar"></div><div class="lbl">◆ 客户</div><div class="val">${cl.length}</div><div class="meta">在投 ${activeC} · 洽谈中 ${leads}</div></div>
+    <div class="kpi blue"><div class="bar"></div><div class="lbl">▲ 在投项目</div><div class="val">${run.length}</div><div class="meta">管理预算 ${fmt(mgBudget)} ${CUR()}</div></div>
+    <div class="kpi"><div class="bar"></div><div class="lbl">◷ 广告已花费</div><div class="val">${fmt(mgSpent)}<small>${CUR()}</small></div><div class="meta">进行中项目累计</div></div>
+    <div class="kpi"><div class="bar"></div><div class="lbl">✓ 已收款</div><div class="val">${fmt(received)}<small>${CUR()}</small></div><div class="meta">其中服务费 ${fmt(recvFee)} ${CUR()}</div></div>
+    <div class="kpi amber"><div class="bar"></div><div class="lbl">◷ 待收款</div><div class="val">${fmt(pending)}<small>${CUR()}</small></div><div class="meta">${pending>0?'记得去催':'全部收齐 👍'}</div></div>
+  </div>`;
+  const campRows=run.length?run.map(c=>{const pct=c.budget>0?Math.min(100,Math.round(c.spent/c.budget*100)):0;return `<div class="mini" onclick="openForm('campaigns','${c.id}')" style="cursor:pointer"><div><div class="nm">${esc(c.name)}</div><div class="sb">${esc(clientName(c.clientId))} · ${esc(c.platform||'')}</div><div class="progress"><i style="width:${pct}%"></i></div></div><div class="rt"><div class="amt num">${fmt(c.spent)} / ${fmt(c.budget)}</div><div class="sb">${pct}% 已花</div></div></div>`;}).join(''):`<div class="empty" style="padding:30px"><p>还没有进行中的投放</p></div>`;
+  const pend=state.payments.filter(p=>p.status==='待收');
+  const payRows=pend.length?pend.map(p=>`<div class="mini" onclick="openForm('payments','${p.id}')" style="cursor:pointer"><div><div class="nm">${esc(clientName(p.clientId))}</div><div class="sb">${esc(p.type)} · ${esc(p.date||'')}</div></div><div class="rt"><div class="amt num" style="color:var(--amber)">+${fmt(p.amount)} ${CUR()}</div></div></div>`).join(''):`<div class="empty" style="padding:30px"><p>没有待收款,清爽 ✨</p></div>`;
+  return kpis+`<div class="prow"><div class="panel"><div class="panel-h"><h3>▲ 进行中的投放</h3><div class="spacer"></div><button class="btn ghost" style="padding:6px 11px;font-size:12px" onclick="go('campaigns')">全部</button></div><div class="panel-b">${campRows}</div></div><div class="panel"><div class="panel-h"><h3>◷ 待收款</h3><div class="spacer"></div><button class="btn ghost" style="padding:6px 11px;font-size:12px" onclick="go('payments')">全部</button></div><div class="panel-b">${payRows}</div></div></div>`;
+}
+function viewClients(){
+  const q=$('search').value.trim().toLowerCase();
+  let rows=state.clients;
+  if(q)rows=rows.filter(c=>((c.name||'')+(c.contact||'')+(c.vertical||'')+(c.pkg||'')).toLowerCase().includes(q));
+  if(!state.clients.length)return emptyState('◆','还没有客户','把你手上的第一个客户录进来,后面投放和收款都挂在它下面。','openForm(\'clients\')','+ 新增客户');
+  const body=rows.map(c=>{
+    const plats=(c.platforms||[]).map(p=>`<span class="tag">${esc(p)}</span>`).join('')||'<span class="tag">—</span>';
+    const ready=[['BM',c.bm],['PX',c.pixel],['卡',c.card]].map(([k,v])=>`<span class="chk ${v?'on':'off'}" title="${k}">${v?'✓':'·'}</span>`).join('');
+    return `<tr class="clk" onclick="openForm('clients','${c.id}')"><td><div class="cell-main">${esc(c.name)}</div><div class="cell-sub">${esc(c.contact||'无联系方式')}</div></td><td><span class="tag">${esc(c.vertical||'—')}</span></td><td>${plats}</td><td>${esc(c.pkg||'—')}</td><td class="num">${c.fee?fmt(c.fee)+' '+CUR():'—'}</td><td><div class="ready">${ready}</div></td><td><span class="pill ${pillClass(C_STATUS,c.status)}">${esc(c.status||'—')}</span></td></tr>`;
+  }).join('');
+  return `<div class="card"><div class="tbl-wrap"><table><thead><tr><th>客户</th><th>品类</th><th>平台</th><th>套餐</th><th>月服务费</th><th>账户就绪</th><th>状态</th></tr></thead><tbody>${body||`<tr><td colspan="7" class="empty">没有匹配「${esc(q)}」的客户</td></tr>`}</tbody></table></div></div>`;
+}
+function viewCampaigns(){
+  if(!state.campaigns.length)return emptyState('▲','还没有投放项目','给某个客户新建一条投放,记好预算和已花费,随时掌握进度。','openForm(\'campaigns\')','+ 新增投放');
+  const body=state.campaigns.map(c=>{const pct=c.budget>0?Math.min(100,Math.round(c.spent/c.budget*100)):0;return `<tr class="clk" onclick="openForm('campaigns','${c.id}')"><td><div class="cell-main">${esc(c.name)}</div><div class="cell-sub">${esc(clientName(c.clientId))}</div></td><td><span class="tag">${esc(c.platform||'—')}</span></td><td>${esc(c.goal||'—')}</td><td class="num">${fmt(c.budget)} ${CUR()}</td><td style="min-width:150px"><div class="num" style="font-weight:600">${fmt(c.spent)} ${CUR()} · ${pct}%</div><div class="progress" style="width:100%;margin-top:5px"><i style="width:${pct}%;background:${pct>=90?'var(--red)':'var(--accent)'}"></i></div></td><td class="cell-sub">${esc(c.start||'')}${c.end?' → '+esc(c.end):''}</td><td><span class="pill ${pillClass(CAMP_STATUS,c.status)}">${esc(c.status||'—')}</span></td></tr>`;}).join('');
+  return `<div class="card"><div class="tbl-wrap"><table><thead><tr><th>项目</th><th>平台</th><th>目标</th><th>预算</th><th>已花费 / 进度</th><th>周期</th><th>状态</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
+}
+function viewPayments(){
+  if(!state.payments.length)return emptyState('$','还没有收款记录','每笔服务费、广告预充都记一下,待收的会在概览提醒你。','openForm(\'payments\')','+ 记一笔收款');
+  const sorted=[...state.payments].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const body=sorted.map(p=>`<tr class="clk" onclick="openForm('payments','${p.id}')"><td><div class="cell-main">${esc(clientName(p.clientId))}</div><div class="cell-sub">${esc(p.note||'')}</div></td><td><span class="tag">${esc(p.type)}</span></td><td class="num" style="font-weight:650">${fmt(p.amount)} ${CUR()}</td><td class="cell-sub">${esc(p.date||'')}</td><td><span class="pill ${pillClass(PAY_STATUS,p.status)}">${esc(p.status)}</span></td></tr>`).join('');
+  return `<div class="card"><div class="tbl-wrap"><table><thead><tr><th>客户</th><th>类型</th><th>金额</th><th>日期</th><th>状态</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
+}
+function viewPackages(){
+  const note=`<div class="section-note"><b>这是你对外的服务菜单</b> —— 报价、计费方式都在这,谈客户时照着说。核心原则:<b>走客户自己的广告户</b>,你只收服务费 / 管理费。点任意一张可编辑。</div>`;
+  if(!state.packages.length)return note+emptyState('≡','还没有套餐','把你的报价定下来,SEO、代投、建站各来一档。','openForm(\'packages\')','+ 新增套餐');
+  const cards=state.packages.map(p=>{const unit=p.billing==='按广告花费%'?'%':' '+CUR();const bl={'月费':'/ 月','一次性':'一次性','按广告花费%':'of 广告花费'}[p.billing]||'';return `<div class="pkg" onclick="openForm('packages','${p.id}')"><div class="pn">${esc(p.name)}</div><div class="pp">${fmt(p.price)}${unit}</div><div class="pb">${esc(bl)}</div><div class="pd">${esc(p.desc||'')}</div></div>`;}).join('');
+  return note+`<div class="pkgs">${cards}</div>`;
+}
+function viewBriefs(){
+  const note=`<div class="section-note">每个项目在这里配好一整套:<b>广告目标、受众、兴趣词、投放节奏、欢迎语、文案、素材方向</b>。这就是喂给 AI 助手和投放用的"料"。点任意卡片编辑。</div>`;
+  const presetBtn=state.briefs.length?`<button class="btn ghost" style="margin-bottom:16px" onclick="loadPresets()">⬇ 载入预设(rankmesa / cardandpage)</button>`:'';
+  if(!state.briefs.length)return note+emptyState('✦','还没有投放配置','给第一个项目配一套,或直接载入 rankmesa.com、cardandpage.com 的预设配置。','loadPresets()','⬇ 载入预设配置');
+  const cards=state.briefs.map(b=>{const ints=(b.interests||'').split(/[,，\n]/).map(s=>s.trim()).filter(Boolean).slice(0,6).map(w=>`<span class="tag b">${esc(w)}</span>`).join('');const aud=(b.audience||'—');return `<div class="brief" onclick="openForm('briefs','${b.id}')"><div class="brief-h"><div><div class="bp-name">${esc(b.project)}</div><div class="bp-sub">${esc(b.market||'')}</div></div><span class="pill ${pillClass(BRIEF_STATUS,b.status)}">${esc(b.status||'草稿')}</span></div><div class="brief-row"><span class="k">目标</span><span class="v">${esc(b.objective||'—')} · ${esc(b.channel||'—')}</span></div><div class="brief-row"><span class="k">受众</span><span class="v">${esc(aud.slice(0,76))}${aud.length>76?'…':''}</span></div><div class="brief-ints">${ints}</div></div>`;}).join('');
+  return note+presetBtn+`<div class="briefs">${cards}</div>`;
+}
+function viewTeam(){
+  const note=`<div class="section-note">团队成员用各自账号登录,看到<b>同一套数据</b>。<b>新增成员</b>:在 Supabase 后台 Authentication → Users 用邮箱邀请(建议先关闭公开注册)。<b>改角色</b>(owner/admin/member)也在后台 profiles 表里改。</div>`;
+  const rows=(state.members||[]).map(m=>{const me=m.id===(user&&user.id);const rc=m.role==='owner'?'p-green':(m.role==='admin'?'p-blue':'p-gray');return `<tr><td><div class="cell-main">${esc(m.name||'—')} ${me?'<span class="tag b">你</span>':''}</div><div class="cell-sub">${esc(m.email||'')}</div></td><td><span class="pill ${rc}">${esc(m.role||'member')}</span></td><td>${me?`<button class="btn ghost" style="padding:5px 11px;font-size:12px" onclick="renameMe()">改名</button>`:''}</td></tr>`;}).join('');
+  return note+`<div class="card"><div class="tbl-wrap"><table><thead><tr><th>成员</th><th>角色</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="3" class="empty">暂无成员</td></tr>'}</tbody></table></div></div>`;
+}
+async function renameMe(){const n=prompt('你的显示名',(profile&&profile.name)||'');if(n==null)return;const {error}=await supa.from('profiles').update({name:n}).eq('id',user.id);if(error){toast('改名失败:'+error.message);return;}profile.name=n;await loadMembers();renderAccount();render();toast('已更新');}
+function emptyState(ic,title,desc,action,btn){return `<div class="card"><div class="empty"><div class="big">${ic}</div><div style="font-size:16px;font-weight:650;color:var(--text);margin-bottom:6px">${title}</div><p>${desc}</p><button class="btn" onclick="${action}">${btn}</button></div></div>`;}
+
+/* ============ forms ============ */
+let editing={coll:null,id:null};
+const SCHEMAS={
+  clients:[
+    {k:'name',l:'客户名 / 公司',t:'text',req:1,full:1},{k:'contact',l:'联系方式 (WhatsApp/微信)',t:'text',full:1},
+    {k:'vertical',l:'品类',t:'select',opt:VERTICALS},{k:'status',l:'状态',t:'select',opt:C_STATUS.map(x=>x[0])},
+    {k:'platforms',l:'投放平台',t:'checks',opt:PLATFORMS,full:1},{k:'pkg',l:'套餐',t:'text'},{k:'fee',l:'月服务费 (U)',t:'number'},
+    {k:'_ready',l:'账户就绪情况(确认是否用客户自己的户)',t:'bools',opt:[['bm','BM 已授权给你'],['pixel','Pixel/转化 已配'],['card','支付卡 已绑(客户的)']],full:1},
+    {k:'note',l:'备注',t:'textarea',full:1}
+  ],
+  campaigns:[
+    {k:'clientId',l:'所属客户',t:'clientSel',req:1,full:1},{k:'name',l:'项目名',t:'text',req:1,full:1},
+    {k:'platform',l:'平台',t:'select',opt:PLATFORMS},{k:'goal',l:'目标',t:'select',opt:GOALS},
+    {k:'budget',l:'总预算 (U)',t:'number'},{k:'spent',l:'已花费 (U)',t:'number'},
+    {k:'start',l:'开始日期',t:'date'},{k:'end',l:'结束日期',t:'date'},
+    {k:'status',l:'状态',t:'select',opt:CAMP_STATUS.map(x=>x[0])},{k:'note',l:'备注',t:'textarea',full:1}
+  ],
+  payments:[
+    {k:'clientId',l:'客户',t:'clientSel',req:1,full:1},{k:'type',l:'类型',t:'select',opt:PAY_TYPES},
+    {k:'status',l:'状态',t:'select',opt:PAY_STATUS.map(x=>x[0])},{k:'amount',l:'金额 (U)',t:'number',req:1},
+    {k:'date',l:'日期',t:'date'},{k:'note',l:'备注',t:'textarea',full:1}
+  ],
+  packages:[
+    {k:'name',l:'套餐名',t:'text',req:1,full:1},{k:'billing',l:'计费方式',t:'select',opt:BILLINGS},
+    {k:'price',l:'价格 (U 或 %)',t:'number'},{k:'desc',l:'说明',t:'textarea',full:1}
+  ],
+  briefs:[
+    {k:'project',l:'项目 / 站点',t:'text',req:1,full:1},{k:'vertical',l:'品类',t:'select',opt:VERTICALS},
+    {k:'objective',l:'广告目标',t:'select',opt:OBJECTIVES},{k:'channel',l:'主渠道',t:'select',opt:CHANNELS},
+    {k:'market',l:'目标市场 / 语言',t:'text',full:1},{k:'audience',l:'受众定向',t:'textarea',full:1},
+    {k:'interests',l:'兴趣词(逗号 / 换行分隔)',t:'textarea',full:1},{k:'pacing',l:'投放节奏',t:'textarea',full:1},
+    {k:'welcome',l:'欢迎语',t:'textarea',full:1},{k:'copy',l:'文案(可多条)',t:'textarea',full:1},
+    {k:'creative',l:'素材方向(AI + 实拍)',t:'textarea',full:1},{k:'status',l:'状态',t:'select',opt:['草稿','在投','暂停']},
+    {k:'note',l:'备注',t:'textarea',full:1}
+  ]
+};
+const NEW_TITLES={clients:'新增客户',briefs:'新增投放配置',campaigns:'新增投放项目',payments:'记一笔收款',packages:'新增套餐'};
+const EDIT_TITLES={clients:'编辑客户',briefs:'编辑投放配置',campaigns:'编辑投放',payments:'编辑收款',packages:'编辑套餐'};
+function quickAdd(){if(current!=='overview'&&current!=='team')openForm(current);}
+function openForm(coll,id){
+  editing={coll,id:id||null};
+  const item=id?state[coll].find(x=>x.id===id):{};
+  $('modalTitle').textContent=id?EDIT_TITLES[coll]:NEW_TITLES[coll];
+  $('delBtn').style.display=(id&&isAdmin())?'block':'none';
+  $('modalBody').innerHTML=`<div class="fgrid">${SCHEMAS[coll].map(f=>renderField(f,item||{})).join('')}</div>`;
+  $('overlay').classList.add('show');
+}
+function renderField(f,item){
+  const v=item[f.k], full=f.full?' full':''; let inner='';
+  if(f.t==='text'||f.t==='number'||f.t==='date'){inner=`<input id="f_${f.k}" type="${f.t==='number'?'number':f.t==='date'?'date':'text'}" value="${esc(v!=null?v:'')}">`;}
+  else if(f.t==='textarea'){inner=`<textarea id="f_${f.k}">${esc(v!=null?v:'')}</textarea>`;}
+  else if(f.t==='select'){inner=`<select id="f_${f.k}">${f.opt.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
+  else if(f.t==='clientSel'){const opts=state.clients.map(c=>`<option value="${c.id}" ${c.id===v?'selected':''}>${esc(c.name)}</option>`).join('');inner=`<select id="f_${f.k}">${state.clients.length?opts:'<option value="">先去「客户」里建一个客户</option>'}</select>`;}
+  else if(f.t==='checks'){const arr=Array.isArray(v)?v:[];inner=`<div class="chkrow" id="f_${f.k}">${f.opt.map(o=>`<label class="chkbox ${arr.includes(o)?'on':''}"><input type="checkbox" value="${o}" ${arr.includes(o)?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${esc(o)}</label>`).join('')}</div>`;}
+  else if(f.t==='bools'){inner=`<div class="chkrow">${f.opt.map(([key,lab])=>`<label class="chkbox ${item[key]?'on':''}"><input type="checkbox" id="f_${key}" ${item[key]?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${esc(lab)}</label>`).join('')}</div>`;}
+  return `<div class="field${full}"><label>${esc(f.l)}${f.req?' *':''}</label>${inner}</div>`;
+}
+async function saveForm(){
+  const {coll,id}=editing;
+  const data=id?{...state[coll].find(x=>x.id===id)}:{};
+  delete data.id;
+  for(const f of SCHEMAS[coll]){
+    if(f.t==='checks'){const box=$('f_'+f.k);data[f.k]=[...box.querySelectorAll('input:checked')].map(i=>i.value);}
+    else if(f.t==='bools'){f.opt.forEach(([key])=>{data[key]=$('f_'+key).checked;});}
+    else{const e=$('f_'+f.k);if(!e)continue;let val=e.value;if(f.t==='number')val=val===''?0:Number(val);data[f.k]=val;}
+  }
+  if((coll==='clients'||coll==='campaigns'||coll==='packages'||coll==='briefs')&&!data[SCHEMAS[coll][0].k]){toast('请填'+SCHEMAS[coll][0].l.split(' ')[0]);return;}
+  if(id){const rec=state[coll].find(x=>x.id===id);Object.assign(rec,data);render();await recUpdate(id,data);}
+  else{const newId=uid();state[coll].push({id:newId,...data});render();await recInsert(COLL_TYPE[coll],newId,data);}
+  closeModal();toast(id?'已更新':'已添加');
+}
+async function deleteCurrent(){
+  const {coll,id}=editing;if(!id)return;
+  if(!isAdmin()){toast('仅 owner/admin 可删除');return;}
+  if(!confirm('确定删除?此操作不可撤销。'))return;
+  state[coll]=state[coll].filter(x=>x.id!==id);render();closeModal();await recDelete(id);toast('已删除');
+}
+function closeModal(){$('overlay').classList.remove('show');editing={coll:null,id:null};}
+
+/* ============ presets ============ */
+function presetBriefs(){return [
+  {project:'rankmesa.com',vertical:'SEO',objective:'线索 Leads',channel:'落地页 Landing',market:'中文为主(大陆/港台/东南亚华人),英文为辅 · 产品本身中英双语',audience:'SEO 机构老板与负责人、独立 SEO 顾问、中小数字营销代理、企业 in-house SEO/市场经理。共同点:管理多个网站、每月要给客户或上级出 SEO 报告。',interests:'SEO工具, Ahrefs, Semrush, Google Search Console, 排名追踪, 外链建设, 白标报告, 客户月报, 数字营销代理, SEO审计, 关键词研究, GA4',pacing:'SaaS 转化窗口长,给够学习期。先小预算测 3–5 组「受众 × 素材」跑 5–7 天,挑 CPL 最低的 1–2 组加预算;以「注册试用 / 预约 demo」为优化事件,别只看点击。',welcome:'你好 👋 想帮客户更快出 SEO 月报、少花手动时间?告诉我你现在管几个网站,我发你免费试用链接 + 中文 demo。',copy:'① 痛点:还在手动拼 SEO 月报?RankMesa 把审计、排名、GA4、客户审批、带品牌月报全放一个台,客户在自己的门户看进度。\n② 功能:一个控制台管所有客户的 SEO——审计→任务→客户审批→月报,AI 直接起 90 天计划和关键词地图。\n③ 身份:做 SEO 代运营的,别再用 Excel + 截图交活。RankMesa 给你带 logo 的客户门户和自动月报。',creative:'主:录屏 demo 30–45s(审计→任务→一键月报);AI 真人口播讲痛点(Arcads 中/英);客户门户截图轮播。实拍:「手忙脚乱做月报 vs 一键生成」对比短片。',status:'草稿',note:'B2B SaaS,决策链长,配合落地页留资 + 邮件 / WhatsApp 跟进。'},
+  {project:'cardandpage.com',vertical:'其他',objective:'消息 Messages',channel:'CTWA (WhatsApp)',market:'中文市场(大陆 / 东南亚华人创业者、商户、独立开发者)',audience:'要上新品或做活动的团队、要重做官网的品牌、商户/运营后台与会员中心的运营方、没有自研团队但要 Android App 的生意。',interests:'落地页设计, UI设计, 后台管理系统, Figma, 独立站, Shopify, APK开发, 产品设计, 创业, SaaS, 小程序',pacing:'设计服务靠作品说话——素材比受众更关键。先用高质量案例图/录屏测钩子,跑出点击最高的 1–2 组案例再放量;CTWA 进来 30 秒内回、先对齐需求再报价。',welcome:'你好 👋 需要落地页 / 后台 UI / 还是打包成 Android App?把需求和参考发我,先对齐范围再给报价(也可邮件 hello@cardandpage.com)。',copy:'① 落地页:官网第一屏抓不住人?我们帮你重排首屏、信息层级、CTA、表单,出电脑 + 手机两套稿,附开发可用的视觉规范。\n② 后台:后台太丑没人愿用?导航、仪表盘、表格、筛选、详情页、空/加载/报错状态全给齐,表格在手机自动变卡片。\n③ APK:要 Android App 又没开发团队?从 UI 到打包 APK 一个团队搞定,真机测试 + 安装更新说明一起给。',creative:'主:作品 before/after 对比图轮播 + 30s 后台操作录屏 + APK 安装演示。设计服务里 AI 口播不如真实作品,实拍 / 录屏为主。',status:'草稿',note:'服务类、询价成交,CTWA 直接聊需求最顺;备 2–3 个代表作品做素材。'}
+];}
+async function loadPresets(){
+  const have=new Set(state.briefs.map(b=>b.project));
+  const add=presetBriefs().filter(b=>!have.has(b.project));
+  if(!add.length){toast('预设已存在');return;}
+  for(const data of add){const newId=uid();state.briefs.push({id:newId,...data});await recInsert('brief',newId,data);}
+  render();toast('已载入 '+add.length+' 份预设');
+}
+
+/* ============ misc ============ */
+function exportData(){
+  const out={clients:state.clients,campaigns:state.campaigns,payments:state.payments,packages:state.packages,briefs:state.briefs};
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='操盘控制台备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出备份');
+}
+let toastT;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+initApp();
+</script>
+</body>
+</html>
