@@ -104,8 +104,10 @@ if [ -n "$NGX_BAK" ]; then
 fi
 
 step "自检"
-curl -sS --max-time 15 "https://$DOMAIN/api/health" | grep -q '"ok":true' && ok "公网接口正常" || warn "公网接口没通,等几秒再试"
-curl -sS --max-time 15 "https://$DOMAIN/" | grep -q 'aiGenerate' && ok "页面里有 AI 按钮了" || warn "页面里没看到,可能有缓存,Ctrl+F5"
+H=$(curl -sS --max-time 15 "https://$DOMAIN/api/health" || true)
+case "$H" in *'"ok":true'*) ok "公网接口正常";; *) warn "公网接口没通,等几秒再试";; esac
+PAGE=$(curl -sS --max-time 15 "https://$DOMAIN/" || true)
+case "$PAGE" in *aiGenerate*) ok "页面里有 AI 按钮了";; *) warn "页面里没看到,可能有缓存,Ctrl+F5";; esac
 
 cat <<EOF
 
