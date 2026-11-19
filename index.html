@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>操盘控制台 · runadops</title>
+<meta name="color-scheme" content="dark">
+<style>
+:root{
+  --bg:#0f1115; --bg2:#12151c; --panel:#161922; --panel2:#1b1f2a;
+  --line:#262b36; --line2:#303643;
+  --text:#e6e8ee; --muted:#8b93a7; --faint:#5f677a;
+  --accent:#4c8dff; --accent-dim:#1f3a6b;
+  --green:#2dd4a7; --amber:#f2b23a; --red:#ef5a5a; --purple:#a78bfa;
+  --radius:10px; --radius-sm:7px;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent);text-decoration:none}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#2b313d;border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 顶部提示条 ---------- */
+#banner{display:none;padding:10px 16px;background:#3a2f12;color:#f6d488;border-bottom:1px solid #574419;font-size:13px}
+#banner.show{display:block}
+#banner b{color:#ffd77a}
+#banner code{background:#00000040;padding:1px 5px;border-radius:4px;font-size:12px}
+
+/* ---------- 登录 ---------- */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{
+  width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:28px;box-shadow:var(--shadow)
+}
+.card h1{margin:0 0 4px;font-size:20px;letter-spacing:.5px}
+.card .sub{color:var(--muted);font-size:13px;margin-bottom:22px}
+.tabs{display:flex;gap:4px;background:var(--bg2);padding:4px;border-radius:var(--radius-sm);margin-bottom:18px}
+.tabs button{flex:1;background:none;border:0;padding:8px;border-radius:5px;color:var(--muted);cursor:pointer;font-size:13px}
+.tabs button.on{background:var(--panel2);color:var(--text);box-shadow:0 1px 2px #0006}
+label.f{display:block;margin-bottom:14px}
+label.f span{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+label.f span i{color:var(--red);font-style:normal}
+input,select,textarea{
+  width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:9px 11px;outline:none;transition:border-color .15s,box-shadow .15s
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px #4c8dff22}
+textarea{min-height:76px;resize:vertical}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:32px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--panel2);border:1px solid var(--line2);color:var(--text);
+  padding:9px 14px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;
+  transition:background .15s,border-color .15s,opacity .15s
+}
+.btn:hover{background:#222836;border-color:#3b4354}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn.primary:hover{background:#3d7cf0}
+.btn.danger{color:var(--red);border-color:#4a2a2e}
+.btn.danger:hover{background:#2a1a1d;border-color:#6b353b}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.btn.block{width:100%;padding:11px}
+.msg{margin-top:14px;padding:9px 11px;border-radius:var(--radius-sm);font-size:12.5px;display:none}
+.msg.show{display:block}
+.msg.err{background:#2c1619;border:1px solid #5b2a30;color:#f3a3a8}
+.msg.ok{background:#12291f;border:1px solid #27543f;color:#8fe3c0}
+.hint{color:var(--faint);font-size:12px;margin-top:14px;line-height:1.6}
+
+/* ---------- 布局 ---------- */
+#app{display:none;min-height:100vh}
+#app.show{display:flex;flex-direction:column}
+.shell{flex:1;display:flex;min-height:0}
+aside{
+  width:208px;flex:0 0 208px;background:var(--bg2);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:16px 12px
+}
+.brand{padding:4px 8px 18px;display:flex;align-items:center;gap:9px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px #2dd4a7aa;flex:0 0 auto}
+.brand b{font-size:14.5px;letter-spacing:.4px}
+.brand small{display:block;color:var(--faint);font-size:11px;letter-spacing:.3px}
+nav{display:flex;flex-direction:column;gap:2px;flex:1}
+nav button{
+  display:flex;align-items:center;gap:10px;background:none;border:0;text-align:left;
+  padding:9px 10px;border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;font-size:13.5px
+}
+nav button:hover{background:#1a1e28;color:var(--text)}
+nav button.on{background:var(--accent-dim);color:#cfe0ff}
+nav button .ic{width:18px;text-align:center;font-size:14px;flex:0 0 18px}
+nav button .ct{margin-left:auto;font-size:11px;color:var(--faint);background:#00000040;padding:1px 6px;border-radius:9px}
+nav button.on .ct{color:#9dbcf0}
+.aside-foot{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+
+header.top{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:var(--bg2);border-bottom:1px solid var(--line)
+}
+header.top h2{margin:0;font-size:16px;font-weight:600}
+header.top .who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.pill{padding:2px 9px;border-radius:20px;font-size:11px;border:1px solid var(--line2);background:var(--panel)}
+.pill.owner{color:#ffd77a;border-color:#5a4a1c;background:#2a2311}
+.pill.admin{color:#a78bfa;border-color:#3c3167;background:#201a33}
+.pill.member{color:var(--muted)}
+.live{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--faint)}
+.live .d{width:6px;height:6px;border-radius:50%;background:var(--faint)}
+.live.on .d{background:var(--green);box-shadow:0 0 8px #2dd4a7}
+
+main{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;overflow:auto;padding:18px 20px 40px}
+.toolbar{display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar .search{position:relative;min-width:200px}
+.toolbar .search input{padding-left:30px}
+.toolbar .search::before{content:"🔍";position:absolute;left:9px;top:8px;font-size:12px;opacity:.5}
+.toolbar .sp{margin-left:auto}
+
+/* ---------- 统计 ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px}
+.stat .k{font-size:11.5px;color:var(--muted);margin-bottom:5px}
+.stat .v{font-size:21px;font-weight:600;letter-spacing:.3px}
+.stat .v small{font-size:12px;color:var(--muted);font-weight:400;margin-left:3px}
+
+/* ---------- 表格 ---------- */
+.tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);color:var(--muted);font-weight:500;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#1a1e28}
+td.acts{white-space:nowrap;text-align:right}
+td .nm{font-weight:500}
+td .sub{color:var(--faint);font-size:12px}
+.tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11.5px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted)}
+.tag.g{color:var(--green);border-color:#1f4a3c;background:#11271f}
+.tag.a{color:var(--amber);border-color:#4d3c15;background:#271f0f}
+.tag.r{color:var(--red);border-color:#4a2a2e;background:#271518}
+.tag.b{color:#8fb8ff;border-color:#27395c;background:#131c2c}
+.empty{padding:46px 20px;text-align:center;color:var(--faint)}
+.empty .big{font-size:30px;margin-bottom:10px;opacity:.5}
+
+/* ---------- 投放配置 ---------- */
+.cfgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}
+.cfcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px}
+.cfcard h4{margin:0 0 3px;font-size:13.5px}
+.cfcard p{margin:0 0 9px;color:var(--faint);font-size:11.5px}
+.cfcard textarea{min-height:104px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- 弹窗 ---------- */
+.mask{position:fixed;inset:0;background:#06080c; background:rgba(6,8,12,.72);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+.mask.show{display:flex}
+.modal{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:var(--shadow)}
+.modal .mh{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.modal .mh h3{margin:0;font-size:15.5px}
+.modal .mh button{margin-left:auto;background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0 2px}
+.modal .mb{padding:18px 20px;max-height:62vh;overflow:auto}
+.modal .mf{display:flex;gap:9px;padding:14px 20px;border-top:1px solid var(--line)}
+.modal .mf .sp{margin-left:auto}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.grid2 .full{grid-column:1/-1}
+.fhint{color:var(--faint);font-size:11.5px;margin-top:5px}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(14px);opacity:0;transition:.2s;background:#222836;border:1px solid var(--line2);padding:10px 16px;border-radius:9px;font-size:13px;box-shadow:var(--shadow);z-index:90;pointer-events:none;max-width:88vw}
+#toast.show{opacity:1;transform:translateX(-50%)}
+#toast.err{border-color:#5b2a30;background:#2c1619;color:#f3a3a8}
+
+@media (max-width:860px){
+  header.top{padding:10px 14px}
+  header.top h2{white-space:nowrap}
+  #whoName{display:none}          /* 窄屏只留角色,邮箱收起 */
+  #liveTxt{display:none}          /* 只留同步小圆点 */
+  .shell{flex-direction:column}
+  aside{width:auto;flex:0 0 auto;border-right:0;border-bottom:1px solid var(--line);padding:10px}
+  .brand{padding-bottom:10px}
+  nav{flex-direction:row;overflow:auto;gap:4px}
+  nav button{white-space:nowrap}
+  nav button .ct{display:none}
+  .aside-foot{flex-direction:row;margin-top:10px}
+  .grid2{grid-template-columns:1fr}
+  .content{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<div id="banner"></div>
+
+<!-- ============ 登录 ============ -->
+<div id="login">
+  <div class="card">
+    <h1>操盘控制台</h1>
+    <div class="sub">runadops · 团队版</div>
+    <div class="tabs">
+      <button id="tabIn" class="on">登录</button>
+      <button id="tabUp">注册</button>
+    </div>
+    <form id="authForm" autocomplete="on">
+      <label class="f"><span>邮箱</span>
+        <input id="email" type="email" required autocomplete="username" placeholder="you@example.com">
+      </label>
+      <label class="f"><span>密码</span>
+        <input id="pass" type="password" required minlength="6" autocomplete="current-password" placeholder="至少 6 位">
+      </label>
+      <label class="f" id="nameWrap" style="display:none"><span>你的名字</span>
+        <input id="uname" type="text" placeholder="用于团队里显示">
+      </label>
+      <button class="btn primary block" id="authBtn" type="submit">登录</button>
+    </form>
+    <div class="msg" id="authMsg"></div>
+    <div class="hint" id="authHint">第一个注册的账号自动成为 owner。owner 注册完,记得去 Supabase → Authentication 关掉公开注册,之后用邮箱邀请队友。</div>
+  </div>
+</div>
+
+<!-- ============ 主体 ============ -->
+<div id="app">
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <span class="dot"></span>
+        <span><b>操盘控制台</b><small>runadops.com</small></span>
+      </div>
+      <nav id="nav"></nav>
+      <div class="aside-foot">
+        <button class="btn sm" id="btnBackup">⬇ 备份</button>
+        <button class="btn sm" id="btnLogout">退出登录</button>
+      </div>
+    </aside>
+    <main>
+      <header class="top">
+        <h2 id="viewTitle">客户</h2>
+        <span class="live" id="live"><span class="d"></span><span id="liveTxt">连接中</span></span>
+        <div class="who">
+          <span id="whoName">—</span>
+          <span class="pill member" id="whoRole">member</span>
+        </div>
+      </header>
+      <div class="content" id="content"></div>
+    </main>
+  </div>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script src="./config.js"></script>
+<script>
+/* ===========================================================
+   操盘控制台 · runadops
+   单文件前端。数据存 Supabase:
+     profiles(id,email,name,role)   — 账号与角色
+     records(id,type,data jsonb,updated_at,updated_by) — 全部业务数据
+   建表脚本见仓库 supabase/schema.sql
+   =========================================================== */
+'use strict';
+
+/* ---------- 工具 ---------- */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);}));
+const pad = n => String(n).padStart(2,'0');
+const fmtDate = d => { if(!d) return ''; const t=new Date(d); return isNaN(t)?String(d):`${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`; };
+const fmtTime = d => { if(!d) return ''; const t=new Date(d); return isNaN(t)?'':`${fmtDate(t)} ${pad(t.getHours())}:${pad(t.getMinutes())}`; };
+const todayStr = () => fmtDate(new Date());
+const num = v => { const n=parseFloat(String(v??'').replace(/[^\d.\-]/g,'')); return isNaN(n)?0:n; };
+const money = v => num(v).toLocaleString('zh-CN',{minimumFractionDigits:0,maximumFractionDigits:2});
+
+let toastTimer;
+function toast(text, isErr){
+  const t=$('#toast'); t.textContent=text; t.className='show'+(isErr?' err':'');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className='',2600);
+}
+function banner(html){ const b=$('#banner'); if(!html){b.className='';b.innerHTML='';return;} b.className='show'; b.innerHTML=html; }
+
+/* ---------- 后端配置检查 ---------- */
+const CFG = window.RUNADOPS_CONFIG || {};
+function cfgBad(){
+  const u=(CFG.SUPABASE_URL||'').trim(), k=(CFG.SUPABASE_ANON_KEY||'').trim();
+  if(!u || !k) return '没填';
+  if(!/^https:\/\/.+\.supabase\.co\/?$/.test(u) && !/^https?:\/\//.test(u)) return 'URL 格式不对';
+  if(/填|YOUR|xxx|placeholder/i.test(u+k)) return '还是占位符';
+  if(k.length<40) return 'anon key 看起来不完整';
+  return '';
+}
+
+/* ---------- 加载 supabase-js（CDN 失败自动换源 / 支持本地同目录文件） ---------- */
+const SB_SRCS = [
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
+  'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
+  './supabase.js'
+];
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=src; s.onload=res; s.onerror=()=>rej(new Error(src));
+    document.head.appendChild(s);
+  });
+}
+async function loadSupabaseLib(){
+  if(window.supabase?.createClient) return true;
+  for(const src of SB_SRCS){
+    try{ await loadScript(src); if(window.supabase?.createClient) return true; }catch(e){ /* 换下一个源 */ }
+  }
+  return false;
+}
+
+/* ---------- 全局状态 ---------- */
+let sb=null;                       // supabase client
+let me={id:null,email:'',name:'',role:'member'};
+let store=new Map();               // id -> record
+let settings=null;                 // type=settings 的那条记录
+let view='client';
+let search='';
+let channel=null;
+let refreshTimer=null;
+
+const canDelete = () => me.role==='owner' || me.role==='admin';
+
+/* ---------- 预设（投放配置「载入预设」用） ---------- */
+const PRESET_KEYS = [
+  {key:'platforms',       label:'投放平台',   desc:'新建投放项目时的平台下拉',
+   def:['Facebook','Google Ads','TikTok Ads','Bing Ads','Kwai Ads','Snapchat','X(Twitter)','其他']},
+  {key:'objectives',      label:'投放目标',   desc:'项目的优化目标',
+   def:['转化量','加购','表单线索','App 安装','落地页浏览','互动','品牌曝光']},
+  {key:'bidTypes',        label:'出价方式',   desc:'项目的出价/竞价方式',
+   def:['最低成本','成本上限','ROAS 出价','手动 CPC','目标 CPA']},
+  {key:'creativeTypes',   label:'素材类型',   desc:'备注里常用的素材口径',
+   def:['单图','轮播','竖版短视频','横版视频','口播测评','原生图文']},
+  {key:'projectStatuses', label:'项目状态',   desc:'投放项目状态下拉',
+   def:['待启动','投放中','已暂停','已结束']},
+  {key:'clientStatuses',  label:'客户状态',   desc:'客户状态下拉',
+   def:['洽谈中','合作中','暂停','已流失']},
+  {key:'feeModes',        label:'收费方式',   desc:'套餐的计费口径（只收服务费/管理费）',
+   def:['固定月费','按消耗比例','固定月费+消耗比例','一次性搭建费']},
+  {key:'payMethods',      label:'收款方式',   desc:'收款记录的方式下拉',
+   def:['对公转账','支付宝','微信','USDT','PayPal','Wise']},
+  {key:'currencies',      label:'币种',       desc:'收款币种',
+   def:['CNY','USD','HKD','SGD']},
+  {key:'payStatuses',     label:'收款状态',   desc:'收款记录状态',
+   def:['待收','已收','部分收','已退款']}
+];
+const presetDefaults = () => Object.fromEntries(PRESET_KEYS.map(p=>[p.key,[...p.def]]));
+const opt = key => (settings?.data?.[key]?.length ? settings.data[key] : PRESET_KEYS.find(p=>p.key===key)?.def || []);
+
+/* ===========================================================
+   登录 / 注册
+   =========================================================== */
+let authMode='in';
+function setAuthMode(m){
+  authMode=m;
+  $('#tabIn').classList.toggle('on',m==='in');
+  $('#tabUp').classList.toggle('on',m==='up');
+  $('#authBtn').textContent = m==='in' ? '登录' : '注册';
+  $('#nameWrap').style.display = m==='up' ? 'block' : 'none';
+  $('#pass').setAttribute('autocomplete', m==='in'?'current-password':'new-password');
+  authMsg('');
+}
+function authMsg(text,ok){
+  const el=$('#authMsg');
+  if(!text){ el.className='msg'; el.textContent=''; return; }
+  el.className='msg show '+(ok?'ok':'err'); el.textContent=text;
+}
+$('#tabIn').onclick=()=>setAuthMode('in');
+$('#tabUp').onclick=()=>setAuthMode('up');
+
+$('#authForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  if(!sb){ authMsg('后端还没配置好,先填 config.js'); return; }
+  const email=$('#email').value.trim(), pass=$('#pass').value, nm=$('#uname').value.trim();
+  const btn=$('#authBtn'); btn.disabled=true; const old=btn.textContent; btn.textContent='请稍等…';
+  try{
+    if(authMode==='in'){
+      const {error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error) throw error;
+    }else{
+      const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{name:nm||email.split('@')[0]}}});
+      if(error) throw error;
+      if(!data.session){ authMsg('注册成功,请去邮箱点确认链接,然后回来登录。',true); return; }
+    }
+  }catch(err){
+    authMsg(authErrText(err));
+  }finally{
+    btn.disabled=false; btn.textContent=old;
+  }
+});
+function authErrText(err){
+  const m=String(err?.message||err);
+  if(/Invalid login credentials/i.test(m))   return '邮箱或密码不对。';
+  if(/Email not confirmed/i.test(m))         return '邮箱还没确认,去邮箱点确认链接。';
+  if(/signups? not allowed|disabled/i.test(m))return '公开注册已关闭,请让 owner 在 Supabase 里邀请你。';
+  if(/User already registered/i.test(m))     return '这个邮箱已注册,直接登录。';
+  if(/Password should be/i.test(m))          return '密码太短,至少 6 位。';
+  if(/Failed to fetch|NetworkError/i.test(m))return '连不上 Supabase,检查 config.js 里的 URL,或网络。';
+  return m;
+}
+$('#btnLogout').onclick = async ()=>{ if(sb) await sb.auth.signOut(); };
+
+/* ===========================================================
+   启动
+   =========================================================== */
+(async function boot(){
+  const bad=cfgBad();
+  if(bad){
+    banner(`⚠ <b>还没配置后端</b>（${esc(bad)}）—— 在服务器上编辑 <code>/var/www/runadops/config.js</code>,填入 Supabase 的 <code>Project URL</code> 和 <code>anon public</code> key,保存后 Ctrl+F5 刷新。建表脚本见 <code>supabase/schema.sql</code>。`);
+    $('#authBtn').disabled=true;
+    $('#authHint').textContent='填好 config.js 之后这里就能注册/登录了。';
+    return;
+  }
+  const ok=await loadSupabaseLib();
+  if(!ok){
+    banner('⚠ <b>加载不了 supabase-js</b> —— 这台机器或浏览器连不上 CDN。把 <code>supabase.js</code> 放到 <code>/var/www/runadops/</code> 同目录即可离线加载。');
+    $('#authBtn').disabled=true;
+    return;
+  }
+  sb=window.supabase.createClient(CFG.SUPABASE_URL.replace(/\/+$/,''), CFG.SUPABASE_ANON_KEY, {
+    auth:{persistSession:true,autoRefreshToken:true}
+  });
+  sb.auth.onAuthStateChange((_evt,session)=>{ session?.user ? onSignedIn(session.user) : onSignedOut(); });
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user) onSignedIn(session.user);
+})();
+
+let signedIn=false;
+async function onSignedIn(user){
+  if(signedIn && me.id===user.id) return;
+  signedIn=true;
+  me.id=user.id; me.email=user.email||'';
+  me.name=user.user_metadata?.name || me.email.split('@')[0] || '我';
+  $('#login').style.display='none';
+  $('#app').classList.add('show');
+  banner('');
+  await loadProfile();
+  renderNav(); renderHeader();
+  await loadAll();
+  subscribeRealtime();
+  clearInterval(refreshTimer);
+  refreshTimer=setInterval(()=>{ if(document.visibilityState==='visible') loadAll(true); }, 60000);
+}
+function onSignedOut(){
+  signedIn=false; me={id:null,email:'',name:'',role:'member'};
+  store.clear(); settings=null;
+  clearInterval(refreshTimer);
+  if(channel){ try{ sb.removeChannel(channel); }catch(e){} channel=null; }
+  $('#app').classList.remove('show');
+  $('#login').style.display='flex';
+  setAuthMode('in');
+  $('#pass').value='';
+}
+
+/* ---------- profiles：角色 ---------- */
+async function loadProfile(){
+  try{
+    const {data,error}=await sb.from('profiles').select('*').eq('id',me.id).maybeSingle();
+    if(error) throw error;
+    if(data){
+      me.role=data.role||'member';
+      me.name=data.name||me.name;
+      return;
+    }
+    // 触发器没跑成功时兜底：给自己建一条档案
+    const {error:e2}=await sb.from('profiles').insert({id:me.id,email:me.email,name:me.name,role:'member'});
+    if(e2) throw e2;
+    me.role='member';
+    banner('⚠ 没找到你的档案,已按 <b>member</b> 新建。要改角色:Supabase → Table Editor → <code>profiles</code> → 改 <code>role</code>(owner/admin/member)。');
+  }catch(err){
+    banner(`⚠ 读取 <code>profiles</code> 失败:${esc(err.message||err)} —— 建表脚本可能没跑成功,见 <code>supabase/schema.sql</code>。`);
+  }
+}
+
+/* ===========================================================
+   数据层：records 表（全部业务数据）
+   =========================================================== */
+async function loadAll(quiet){
+  try{
+    // Supabase REST 默认一次最多返回 1000 行,这里分页拉完,免得数据多了被静默截断
+    const PAGE=1000; let from=0, data=[];
+    for(;;){
+      const {data:page,error}=await sb.from('records').select('*')
+        .order('updated_at',{ascending:false}).range(from,from+PAGE-1);
+      if(error) throw error;
+      data=data.concat(page||[]);
+      if(!page || page.length<PAGE) break;
+      from+=PAGE;
+    }
+    store=new Map(data.map(r=>[r.id,r]));
+    settings=data.find(r=>r.type==='settings')||null;
+    if(!quiet) setLive(true);
+    render();
+  }catch(err){
+    if(!quiet) toast('读取数据失败:'+(err.message||err), true);
+    setLive(false, '读取失败');
+  }
+}
+function rows(type){
+  return [...store.values()].filter(r=>r.type===type)
+    .sort((a,b)=> String(b.updated_at||'').localeCompare(String(a.updated_at||'')));
+}
+async function saveRecord(type, data, id){
+  const now=new Date().toISOString();
+  if(id){
+    const {data:out,error}=await sb.from('records')
+      .update({data,updated_at:now,updated_by:me.id}).eq('id',id).select().maybeSingle();
+    if(error) throw error;
+    if(out) store.set(out.id,out);
+    return out;
+  }
+  const row={id:uid(),type,data,updated_at:now,updated_by:me.id};
+  const {data:out,error}=await sb.from('records').insert(row).select().maybeSingle();
+  if(error) throw error;
+  if(out) store.set(out.id,out); else store.set(row.id,row);
+  return out||row;
+}
+async function deleteRecord(id){
+  const {error}=await sb.from('records').delete().eq('id',id);
+  if(error) throw error;
+  store.delete(id);
+}
+
+/* ---------- 实时同步 ---------- */
+function setLive(on, text){
+  const el=$('#live'); el.classList.toggle('on',!!on);
+  $('#liveTxt').textContent = text || (on?'已同步':'未连接');
+}
+function subscribeRealtime(){
+  if(channel){ try{ sb.removeChannel(channel); }catch(e){} }
+  channel=sb.channel('runadops-records')
+    .on('postgres_changes',{event:'*',schema:'public',table:'records'}, payload=>{
+      const {eventType,new:nw,old:od}=payload;
+      if(eventType==='DELETE'){ store.delete(od.id); }
+      else { store.set(nw.id,nw); if(nw.type==='settings') settings=nw; }
+      if(!modalOpen) render();
+    })
+    .subscribe(status=>{
+      if(status==='SUBSCRIBED') setLive(true,'实时同步中');
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') setLive(false,'改为每分钟刷新');
+    });
+}
+
+/* ===========================================================
+   各模块的字段定义
+   type: text | textarea | number | date | select | multiline
+   =========================================================== */
+const refOpts = (type, key='name') => () => rows(type).map(r=>r.data?.[key]).filter(Boolean);
+
+const MODULES = {
+  client:{
+    slug:'clients', label:'客户', icon:'👥', single:'客户',
+    fields:[
+      {key:'name',    label:'客户名称', req:true, w:'full'},
+      {key:'contact', label:'联系人'},
+      {key:'phone',   label:'联系方式', hint:'微信 / 电话 / 邮箱'},
+      {key:'industry',label:'行业',    hint:'如 跨境电商 / 本地服务'},
+      {key:'status',  label:'状态',    type:'select', opts:()=>opt('clientStatuses'), def:'洽谈中'},
+      {key:'pkg',     label:'套餐',    type:'select', opts:refOpts('package'), hint:'先在「套餐」里建好'},
+      {key:'owner',   label:'对接人',  hint:'我们这边负责人'},
+      {key:'note',    label:'备注',    type:'textarea', w:'full'}
+    ],
+    columns:[
+      {h:'客户', r:d=>`<div class="nm">${esc(d.name)}</div>`+(d.industry?`<div class="sub">${esc(d.industry)}</div>`:'')},
+      {h:'联系', r:d=>esc(d.contact||'')+(d.phone?`<div class="sub">${esc(d.phone)}</div>`:'')},
+      {h:'状态', r:d=>tagFor(d.status)},
+      {h:'套餐', r:d=>esc(d.pkg||'')},
+      {h:'对接人', r:d=>esc(d.owner||'')},
+      {h:'备注', r:d=>`<span class="sub">${esc(trunc(d.note,40))}</span>`}
+    ]
+  },
+
+  config:{
+    slug:'settings', label:'投放配置', icon:'⚙', single:'配置', custom:'renderConfig'
+  },
+
+  project:{
+    slug:'projects', label:'投放项目', icon:'🚀', single:'项目',
+    fields:[
+      {key:'name',     label:'项目名称', req:true, w:'full', hint:'如 "A客户-TikTok-11月"'},
+      {key:'client',   label:'客户', req:true, type:'select', opts:refOpts('client')},
+      {key:'platform', label:'平台', type:'select', opts:()=>opt('platforms')},
+      {key:'adAccount',label:'广告户', hint:'客户自有户的名称/ID(本业务一律走客户自己的户)'},
+      {key:'objective',label:'投放目标', type:'select', opts:()=>opt('objectives')},
+      {key:'bidType',  label:'出价方式', type:'select', opts:()=>opt('bidTypes')},
+      {key:'budget',   label:'日预算', type:'number', hint:'客户户里的消耗预算,不是我们的服务费'},
+      {key:'start',    label:'开始日期', type:'date', def:()=>todayStr()},
+      {key:'end',      label:'结束日期', type:'date'},
+      {key:'owner',    label:'操盘手'},
+      {key:'status',   label:'状态', type:'select', opts:()=>opt('projectStatuses'), def:'待启动'},
+      {key:'creative', label:'素材类型', type:'select', opts:()=>opt('creativeTypes')},
+      {key:'note',     label:'备注', type:'textarea', w:'full'}
+    ],
+    columns:[
+      {h:'项目', r:d=>`<div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.client||'')}</div>`},
+      {h:'平台', r:d=>esc(d.platform||'')+(d.adAccount?`<div class="sub">户 ${esc(d.adAccount)}</div>`:'')},
+      {h:'目标/出价', r:d=>esc(d.objective||'')+(d.bidType?`<div class="sub">${esc(d.bidType)}</div>`:'')},
+      {h:'日预算', r:d=>d.budget?money(d.budget):''},
+      {h:'周期', r:d=>d.start?`${esc(fmtDate(d.start))}<div class="sub">${esc(d.end?'至 '+fmtDate(d.end):'进行中')}</div>`:''},
+      {h:'操盘手', r:d=>esc(d.owner||'')},
+      {h:'状态', r:d=>tagFor(d.status)}
+    ],
+    stats:list=>{
+      const run=list.filter(d=>d.status==='投放中');
+      return [
+        {k:'项目总数', v:list.length},
+        {k:'投放中',   v:run.length},
+        {k:'在投日预算合计', v:money(run.reduce((s,d)=>s+num(d.budget),0))},
+        {k:'涉及客户', v:new Set(list.map(d=>d.client).filter(Boolean)).size}
+      ];
+    }
+  },
+
+  payment:{
+    slug:'payments', label:'收款', icon:'💰', single:'收款',
+    fields:[
+      {key:'date',    label:'日期', req:true, type:'date', def:()=>todayStr()},
+      {key:'client',  label:'客户', req:true, type:'select', opts:refOpts('client')},
+      {key:'project', label:'关联项目', type:'select', opts:refOpts('project')},
+      {key:'pkg',     label:'套餐', type:'select', opts:refOpts('package')},
+      {key:'amount',  label:'金额', req:true, type:'number', hint:'只记服务费/管理费,不含客户的广告消耗'},
+      {key:'currency',label:'币种', type:'select', opts:()=>opt('currencies'), def:'CNY'},
+      {key:'method',  label:'收款方式', type:'select', opts:()=>opt('payMethods')},
+      {key:'status',  label:'状态', type:'select', opts:()=>opt('payStatuses'), def:'待收'},
+      {key:'period',  label:'服务周期', hint:'如 2026-11 或 11/01-11/30'},
+      {key:'note',    label:'备注', type:'textarea', w:'full'}
+    ],
+    columns:[
+      {h:'日期', r:d=>esc(fmtDate(d.date))},
+      {h:'客户', r:d=>`<div class="nm">${esc(d.client||'')}</div>`+(d.project?`<div class="sub">${esc(d.project)}</div>`:'')},
+      {h:'金额', r:d=>`<div class="nm">${esc(d.currency||'CNY')} ${money(d.amount)}</div>`+(d.pkg?`<div class="sub">${esc(d.pkg)}</div>`:'')},
+      {h:'方式', r:d=>esc(d.method||'')},
+      {h:'周期', r:d=>esc(d.period||'')},
+      {h:'状态', r:d=>tagFor(d.status)},
+      {h:'备注', r:d=>`<span class="sub">${esc(trunc(d.note,26))}</span>`}
+    ],
+    stats:list=>{
+      const ym=todayStr().slice(0,7);
+      const sum=a=>money(a.reduce((s,d)=>s+num(d.amount),0));
+      const got=list.filter(d=>d.status==='已收');
+      return [
+        {k:'已收合计',       v:sum(got),  unit:'CNY 口径'},
+        {k:'待收合计',       v:sum(list.filter(d=>d.status==='待收')), unit:'CNY 口径'},
+        {k:'本月已收('+ym+')', v:sum(got.filter(d=>String(d.date||'').startsWith(ym)))},
+        {k:'收款笔数',       v:list.length}
+      ];
+    }
+  },
+
+  package:{
+    slug:'packages', label:'套餐', icon:'📦', single:'套餐',
+    fields:[
+      {key:'name',    label:'套餐名称', req:true, w:'full', hint:'如 "标准代运营 · 月付"'},
+      {key:'feeMode', label:'收费方式', type:'select', opts:()=>opt('feeModes'), def:'固定月费'},
+      {key:'price',   label:'月费/固定费', type:'number'},
+      {key:'rate',    label:'消耗比例(%)', type:'number', hint:'按消耗收管理费时填'},
+      {key:'currency',label:'币种', type:'select', opts:()=>opt('currencies'), def:'CNY'},
+      {key:'minTerm', label:'最短周期', hint:'如 1 个月 / 3 个月'},
+      {key:'items',   label:'包含服务', type:'textarea', w:'full', hint:'一行一项:账户搭建、素材产出、日常优化、周报…'},
+      {key:'note',    label:'备注', type:'textarea', w:'full'}
+    ],
+    columns:[
+      {h:'套餐', r:d=>`<div class="nm">${esc(d.name)}</div>`+(d.minTerm?`<div class="sub">最短 ${esc(d.minTerm)}</div>`:'')},
+      {h:'收费方式', r:d=>esc(d.feeMode||'')},
+      {h:'价格', r:d=>{
+        const a=[]; if(num(d.price)) a.push(`${esc(d.currency||'CNY')} ${money(d.price)}`);
+        if(num(d.rate)) a.push(`消耗 ${num(d.rate)}%`);
+        return a.length?`<div class="nm">${a.join('</div><div class="sub">')}</div>`:'';
+      }},
+      {h:'包含服务', r:d=>`<span class="sub">${esc(trunc((d.items||'').replace(/\n/g,' / '),46))}</span>`},
+      {h:'使用客户', r:d=>{
+        const n=rows('client').filter(c=>c.data?.pkg===d.name).length;
+        return n?`<span class="tag b">${n} 家</span>`:'<span class="sub">—</span>';
+      }}
+    ],
+    stats:list=>[{k:'套餐数', v:list.length}]
+  }
+};
+const ORDER=['client','config','project','payment','package'];
+
+function trunc(s,n){ s=String(s||'').replace(/\s+/g,' '); return s.length>n?s.slice(0,n)+'…':s; }
+function tagFor(v){
+  if(!v) return '';
+  const g=['合作中','投放中','已收'], a=['洽谈中','待启动','待收','部分收'], r=['已流失','已结束','已退款','暂停','已暂停'];
+  const c = g.includes(v)?'g' : a.includes(v)?'a' : r.includes(v)?'r' : '';
+  return `<span class="tag ${c}">${esc(v)}</span>`;
+}
+
+/* ===========================================================
+   渲染
+   =========================================================== */
+function renderNav(){
+  const nav=$('#nav');
+  nav.innerHTML=ORDER.map(k=>{
+    const m=MODULES[k];
+    const ct = m.custom ? '' : `<span class="ct">${rows(k).length}</span>`;
+    return `<button data-v="${k}" class="${k===view?'on':''}"><span class="ic">${m.icon}</span><span>${m.label}</span>${ct}</button>`;
+  }).join('');
+  $$('#nav button').forEach(b=>b.onclick=()=>{ view=b.dataset.v; search=''; render(); });
+}
+function renderHeader(){
+  $('#whoName').textContent=me.name+' · '+me.email;
+  const r=$('#whoRole'); r.textContent=me.role; r.className='pill '+me.role;
+  $('#viewTitle').textContent=MODULES[view].label;
+}
+function render(){
+  renderNav(); renderHeader();
+  const m=MODULES[view];
+  if(m.custom){ window[m.custom](); return; }
+  renderTable(view);
+}
+
+function renderTable(type){
+  const m=MODULES[type];
+  const all=rows(type);
+  const q=search.trim().toLowerCase();
+  const list=q ? all.filter(r=>JSON.stringify(r.data||{}).toLowerCase().includes(q)) : all;
+
+  const stats = m.stats ? m.stats(list.map(r=>r.data||{})) : null;
+  const statsHtml = stats ? '<div class="stats">'+stats.map(s=>
+      `<div class="stat"><div class="k">${esc(s.k)}</div><div class="v">${esc(String(s.v))}${s.unit?`<small>${esc(s.unit)}</small>`:''}</div></div>`
+    ).join('')+'</div>' : '';
+
+  const head = m.columns.map(c=>`<th>${esc(c.h)}</th>`).join('')+'<th>更新</th><th></th>';
+  const body = list.map(r=>{
+    const d=r.data||{};
+    const tds=m.columns.map(c=>`<td>${c.r(d)}</td>`).join('');
+    const del = canDelete()
+      ? `<button class="btn sm danger" data-del="${r.id}">删除</button>`
+      : '<button class="btn sm" disabled title="只有 owner / admin 能删除">删除</button>';
+    return `<tr>${tds}<td><span class="sub">${esc(fmtTime(r.updated_at))}</span></td>`
+         + `<td class="acts"><button class="btn sm" data-edit="${r.id}">编辑</button> ${del}</td></tr>`;
+  }).join('');
+
+  const tableHtml = list.length
+    ? `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`
+    : `<div class="empty"><div class="big">${m.icon}</div>${q?'没有匹配的记录':'还没有'+esc(m.label)+'记录'}<br>`
+      + `<span class="sub">${q?'换个关键词试试':'点右上角「新建'+esc(m.single)+'」开始'}</span></div>`;
+
+  $('#content').innerHTML =
+    '<div class="toolbar">'
+    + `<div class="search"><input id="q" placeholder="搜索${esc(m.label)}…" value="${esc(search)}"></div>`
+    + '<span class="sp"></span>'
+    + '<button class="btn sm" id="btnCsv">导出 CSV</button>'
+    + '<button class="btn sm" id="btnReload">刷新</button>'
+    + `<button class="btn primary sm" id="btnNew">+ 新建${esc(m.single)}</button>`
+    + '</div>'
+    + statsHtml
+    + '<div class="tablewrap">' + tableHtml + '</div>';
+
+  const qi=$('#q');
+  qi.oninput=()=>{ search=qi.value; const p=qi.selectionStart; renderTable(type); const n=$('#q'); n.focus(); n.setSelectionRange(p,p); };
+  $('#btnNew').onclick=()=>openForm(type,null);
+  $('#btnReload').onclick=async()=>{ await loadAll(); toast('已刷新'); };
+  $('#btnCsv').onclick=()=>exportCsv(type,list);
+  $$('[data-edit]').forEach(b=>b.onclick=()=>openForm(type,b.dataset.edit));
+  $$('[data-del]').forEach(b=>b.onclick=()=>askDelete(b.dataset.del));
+}
+
+/* ---------- 投放配置 ---------- */
+function renderConfig(){
+  const d=settings?.data||{};
+  const cards=PRESET_KEYS.map(p=>
+      '<div class="cfcard">'
+    + `<h4>${esc(p.label)}</h4>`
+    + `<p>${esc(p.desc)} · 一行一个</p>`
+    + `<textarea data-cfg="${p.key}" spellcheck="false">${esc((d[p.key]||[]).join('\n'))}</textarea>`
+    + '</div>').join('');
+
+  $('#content').innerHTML =
+    '<div class="toolbar">'
+    + '<span class="sub" style="color:var(--muted)">这里的每一项,就是其他模块里下拉框的选项。改完点保存,全团队立刻生效。</span>'
+    + '<span class="sp"></span>'
+    + '<button class="btn sm" id="btnPreset">载入预设</button>'
+    + '<button class="btn primary sm" id="btnSaveCfg">保存配置</button>'
+    + '</div>'
+    + '<div class="cfgrid">' + cards + '</div>'
+    + '<div class="hint">载入预设 = 用一套常用默认值填满上面所有格子(会覆盖当前内容,点「保存配置」后才真正写入数据库)。</div>';
+
+  $('#btnPreset').onclick=()=>{
+    const def=presetDefaults();
+    $$('[data-cfg]').forEach(t=>{ t.value=(def[t.dataset.cfg]||[]).join('\n'); });
+    toast('预设已填入,记得点「保存配置」');
+  };
+  $('#btnSaveCfg').onclick=async()=>{
+    const data={};
+    $$('[data-cfg]').forEach(t=>{
+      data[t.dataset.cfg]=t.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    });
+    const btn=$('#btnSaveCfg'); btn.disabled=true;
+    try{
+      const out=await saveRecord('settings',data,settings?.id);
+      settings=out; toast('配置已保存'); render();
+    }catch(err){ toast('保存失败:'+(err.message||err),true); }
+    finally{ const b=$('#btnSaveCfg'); if(b) b.disabled=false; }
+  };
+}
+
+/* ===========================================================
+   新建 / 编辑 弹窗
+   =========================================================== */
+let formType=null, formId=null, modalOpen=false;
+function closeModal(){ modalOpen=false; $('#mask').classList.remove('show'); $('#modal').innerHTML=''; formType=formId=null; }
+$('#mask').onclick=e=>{ if(e.target.id==='mask') closeModal(); };
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('#mask').classList.contains('show')) closeModal(); });
+
+function fieldControl(f,cur){
+  if(f.type==='textarea'){
+    return `<textarea name="${f.key}" ${f.req?'required':''} placeholder="${esc(f.hint||'')}">${esc(cur)}</textarea>`;
+  }
+  if(f.type==='select'){
+    const list=(f.opts?f.opts():[]);
+    const has=list.includes(cur);
+    return `<select name="${f.key}" ${f.req?'required':''}><option value="">—</option>`
+      + list.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')
+      + (cur&&!has?`<option selected>${esc(cur)}</option>`:'')
+      + '</select>';
+  }
+  const t = f.type==='number' ? 'number' : f.type==='date' ? 'date' : 'text';
+  return `<input name="${f.key}" type="${t}" ${t==='number'?'step="any"':''} ${f.req?'required':''}`
+    + ` value="${esc(cur)}" placeholder="${esc(f.type==='date'||f.type==='number'?'':(f.hint||''))}">`;
+}
+
+function openForm(type,id){
+  if(modalOpen) return;        // 已有弹窗时不叠加,避免冲掉填了一半的表单
+  modalOpen=true;
+  const m=MODULES[type];
+  const rec=id?store.get(id):null;
+  const d=rec?{...rec.data}:{};
+  formType=type; formId=id||null;
+
+  const fieldHtml=m.fields.map(f=>{
+    const cur = d[f.key] ?? (typeof f.def==='function' ? f.def() : (f.def ?? ''));
+    const cls = f.w==='full' ? 'f full' : 'f';
+    const lab = `<span>${esc(f.label)}${f.req?' <i>*</i>':''}</span>`;
+    const hint = f.hint ? `<div class="fhint">${esc(f.hint)}</div>` : '';
+    return `<label class="${cls}">${lab}${fieldControl(f,cur)}${hint}</label>`;
+  }).join('');
+
+  $('#modal').innerHTML=
+      `<div class="mh"><h3>${id?'编辑':'新建'}${esc(m.single)}</h3><button type="button" id="mClose">×</button></div>`
+    + '<form id="recForm">'
+    + `<div class="mb"><div class="grid2">${fieldHtml}</div>`
+    + (rec?`<div class="fhint">最后更新:${esc(fmtTime(rec.updated_at))}</div>`:'')
+    + '</div><div class="mf">'
+    + (id&&canDelete()?'<button type="button" class="btn danger" id="mDel">删除</button>':'')
+    + '<span class="sp"></span>'
+    + '<button type="button" class="btn" id="mCancel">取消</button>'
+    + '<button type="submit" class="btn primary" id="mSave">保存</button>'
+    + '</div></form>';
+
+  $('#mask').classList.add('show');
+  $('#mClose').onclick=closeModal; $('#mCancel').onclick=closeModal;
+  const delBtn=$('#mDel'); if(delBtn) delBtn.onclick=()=>{ closeModal(); askDelete(id); };
+  // 同步聚焦第一个字段:不能用 setTimeout,否则用户手快先点了别的框,
+  // 焦点会被抢回来,这几下输入就打进了错的字段(日期框还会直接吞掉)
+  const first=$('#modal input,#modal select,#modal textarea'); if(first) first.focus();
+
+  let saving=false;
+  $('#recForm').onsubmit=async e=>{
+    e.preventDefault();
+    if(saving) return;                                        // 防手抖重复提交
+    saving=true;
+    const data={};
+    m.fields.forEach(f=>{
+      const el=$('[name="'+f.key+'"]',$('#modal'));
+      let v=el?String(el.value).trim():'';
+      if(f.type==='number' && v!=='') v=String(num(v));
+      if(v!=='') data[f.key]=v;
+    });
+    const btn=$('#mSave'); btn.disabled=true; btn.textContent='保存中…';
+    try{
+      await saveRecord(type,data,formId);
+      closeModal(); render(); toast('已保存');
+    }catch(err){
+      saving=false;
+      btn.disabled=false; btn.textContent='保存';
+      toast(saveErrText(err),true);
+    }
+  };
+}
+function saveErrText(err){
+  const m=String(err?.message||err);
+  if(/row-level security|permission denied/i.test(m)) return '没有写入权限,检查 records 表的 RLS 策略(见 supabase/schema.sql)。';
+  if(/Failed to fetch/i.test(m)) return '连不上 Supabase,检查网络后重试。';
+  return '保存失败:'+m;
+}
+
+/* ---------- 删除确认 ---------- */
+function askDelete(id){
+  if(modalOpen) return;
+  const rec=store.get(id); if(!rec) return;
+  if(!canDelete()){ toast('只有 owner / admin 能删除',true); return; }
+  modalOpen=true;
+  const m=MODULES[rec.type];
+  const name=rec.data?.name || rec.data?.client || fmtDate(rec.data?.date) || '这条记录';
+  $('#modal').innerHTML=
+      `<div class="mh"><h3>删除${esc(m?.single||'记录')}</h3><button type="button" id="mClose">×</button></div>`
+    + `<div class="mb">确定删除 <b>${esc(name)}</b> 吗?删除后不可恢复(建议先点左下角「备份」)。</div>`
+    + '<div class="mf"><span class="sp"></span>'
+    + '<button class="btn" id="mCancel">取消</button>'
+    + '<button class="btn danger" id="mYes">确定删除</button></div>';
+  $('#mask').classList.add('show');
+  $('#mClose').onclick=closeModal; $('#mCancel').onclick=closeModal;
+  $('#mYes').onclick=async()=>{
+    const b=$('#mYes'); b.disabled=true; b.textContent='删除中…';
+    try{ await deleteRecord(id); closeModal(); render(); toast('已删除'); }
+    catch(err){ b.disabled=false; b.textContent='确定删除'; toast(saveErrText(err),true); }
+  };
+}
+
+/* ===========================================================
+   备份 / 导出
+   =========================================================== */
+function download(filename, text, mime){
+  const blob=new Blob([text],{type:(mime||'text/plain')+';charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
+}
+function stamp(){
+  const t=new Date();
+  return `${t.getFullYear()}${pad(t.getMonth()+1)}${pad(t.getDate())}-${pad(t.getHours())}${pad(t.getMinutes())}`;
+}
+
+$('#btnBackup').onclick=async()=>{
+  const btn=$('#btnBackup'); btn.disabled=true; const old=btn.textContent; btn.textContent='导出中…';
+  try{
+    await loadAll(true);                      // 先拉一遍最新,避免导出旧数据
+    const all=[...store.values()];
+    const counts={};
+    ORDER.concat(['settings']).forEach(t=>{ const n=all.filter(r=>r.type===t).length; if(n) counts[t]=n; });
+    const dump={
+      app:'runadops 操盘控制台',
+      schema:1,
+      exportedAt:new Date().toISOString(),
+      exportedBy:{email:me.email,name:me.name,role:me.role},
+      counts,
+      records:all.sort((a,b)=>(a.type+a.id).localeCompare(b.type+b.id))
+    };
+    // 文件名保持纯 ASCII:Chromium 会丢掉 download 属性里带非 ASCII 的文件名
+    download(`runadops-backup-${stamp()}.json`, JSON.stringify(dump,null,2), 'application/json');
+    toast(`已导出 ${all.length} 条记录`);
+  }catch(err){
+    toast('备份失败:'+(err.message||err),true);
+  }finally{ btn.disabled=false; btn.textContent=old; }
+};
+
+function csvCell(v){
+  const s=String(v==null?'':v);
+  return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+function exportCsv(type,list){
+  const m=MODULES[type];
+  if(!list.length){ toast('没有可导出的记录',true); return; }
+  const heads=m.fields.map(f=>f.label).concat(['最后更新']);
+  const lines=[heads.map(csvCell).join(',')];
+  list.forEach(r=>{
+    const d=r.data||{};
+    lines.push(m.fields.map(f=>csvCell(d[f.key]||'')).concat([csvCell(fmtTime(r.updated_at))]).join(','));
+  });
+  // BOM：Excel 直接双击打开不乱码
+  download(`runadops-${m.slug||type}-${stamp()}.csv`, '\ufeff'+lines.join('\r\n'), 'text/csv');
+  toast(`已导出 ${list.length} 条`);
+}
+
+/* ---------- 快捷键 ---------- */
+document.addEventListener('keydown',e=>{
+  if(!signedIn) return;
+  if(modalOpen) return;                                     // 弹窗开着时不抢键
+  const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||'');
+  if(e.key==='n' && !typing && !e.metaKey && !e.ctrlKey && !MODULES[view].custom){
+    e.preventDefault(); openForm(view,null);
+  }
+  if(e.key==='/' && !typing){ const q=$('#q'); if(q){ e.preventDefault(); q.focus(); } }
+});
+</script>
+</body>
+</html>
