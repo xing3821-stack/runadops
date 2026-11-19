@@ -299,16 +299,8 @@ function isAdmin(){return profile&&(profile.role==='owner'||profile.role==='admi
 
 /* ============ data layer ============ */
 async function loadAll(){
-  /* 分页拉取:Supabase REST 默认一次最多返回 1000 行,
-     不分页的话数据攒多了会被静默截断,界面上看不出来 */
-  let data=[],_from=0;
-  for(;;){
-    const {data:_page,error}=await supa.from('records').select('*').range(_from,_from+999);
-    if(error){toast('加载失败:'+error.message);return;}
-    data=data.concat(_page||[]);
-    if(!_page||_page.length<1000) break;
-    _from+=1000;
-  }
+  let data=[],error=null,_from=0;for(;;){const _r=await supa.from('records').select('*').range(_from,_from+999);if(_r.error){error=_r.error;break;}const _p=_r.data||[];data=data.concat(_p);if(_p.length<1000)break;_from+=1000;}
+  if(error){toast('加载失败:'+error.message);return;}
   const s={clients:[],campaigns:[],payments:[],packages:[],briefs:[],members:state.members||[],settings:{cur:'U'}};
   (data||[]).forEach(r=>{
     if(r.type==='settings'){s.settings={...s.settings,...(r.data||{})};}
