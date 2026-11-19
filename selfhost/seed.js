@@ -24,36 +24,53 @@ if (fs.existsSync(ENV_FILE)) {
 
 /* ---------------- 套餐报价 ----------------
    口径:广告一律走客户自己的广告户,我们只收服务费 / 管理费。
-   计费方式只能是「月费 / 一次性 / 按广告花费%」这三种(控制台的下拉就这三个)。 */
+   定价逻辑:按投入的人力和责任收钱,不按客户赚多少收。
+   计费方式只能是「月费 / 一次性 / 按广告花费%」这三种(控制台的下拉就这三个)。
+
+   超出套餐怎么算(写进报价单,别先做完再要钱):
+     多出的素材      30 U / 条
+     多出的在投项目  200 U / 条 / 月
+     临时加平台      400 U / 个 / 月
+   不包含:广告消耗、WhatsApp API 消息费、实拍差旅场地、网站开发、第三方工具订阅。 */
 const PACKAGES = [
   {
     name: '账户搭建 · 一次性',
     billing: '一次性',
     price: 600,
-    desc: '客户自有主体开户陪跑:BM 建号与授权、Pixel/转化 API 接入、'
-        + '支付卡绑定、落地页合规件(隐私政策 / 服务条款)、'
-        + '域名与中间页搭建。交付后账户归客户自己所有。',
+    desc: '客户自有主体开户陪跑:协助客户在自己的 BM 里建广告户(建在哪个 BM 不可逆,'
+        + '必须一开始就做对)、Pixel 与转化 API 接入、支付卡绑定、中间页搭建'
+        + '(含隐私政策 / 服务条款 / 联系方式)。账户与页面全部归客户所有。',
   },
   {
     name: '基础代运营 · 月费',
     billing: '月费',
     price: 800,
-    desc: '单平台 1–2 条在投:受众与兴趣词配置、素材排期(AI 口播 + 实拍各若干)、'
-        + '日常优化与预算调配、每周一次数据简报。不含素材拍摄与广告消耗。',
+    desc: '适合月消耗 5,000U 以下。单平台 1-2 条在投、素材 4 条/月、日常优化与预算调配、'
+        + '周报(数据)、24 小时内响应。最短 1 个月。'
+        + '不含:广告消耗、WhatsApp API 消息费、实拍差旅、网站开发、第三方工具订阅。',
   },
   {
     name: '标准代运营 · 月费',
     billing: '月费',
     price: 1500,
-    desc: '多平台(Meta + TikTok / Google)同时在投:完整投放方案、A/B 测试排期、'
-        + 'WhatsApp 话术与欢迎语设计、每周数据复盘 + 月度报告、CPA/ROAS 跟踪。',
+    desc: '适合月消耗 5,000-20,000U。两个平台、在投项目 5 条内、素材 10 条/月、'
+        + 'A/B 测试排期、WhatsApp 话术与欢迎语、周报 + 月报(含建议)、8 小时内响应。'
+        + '最短 3 个月。不含项同上。',
+  },
+  {
+    name: '企业级 · 保底+抽成',
+    billing: '月费',
+    price: 2500,
+    desc: '适合月消耗 20,000U 以上。2,500U 保底 + 消耗抽成(2 万以下 12%、5-10 万 10%、'
+        + '10 万以上 8%,做大更便宜)。平台不限、项目不限、素材 20 条/月 + 实拍协调、'
+        + '周报 + 月报 + 季度复盘会、4 小时内响应 + 专属群。最短 6 个月,抽成次月 5 日前对账结清。',
   },
   {
     name: '按广告花费抽成',
     billing: '按广告花费%',
     price: 12,
-    desc: '适合月消耗较大的客户:按客户账户实际消耗的百分比收管理费,'
-        + '消耗越大单位成本越低。通常设月度保底,与基础月费二选一。',
+    desc: '企业级套餐里的抽成部分,也可给不要保底的客户单独用。按客户账户实际消耗的'
+        + '百分比收管理费,随规模递减:2 万U 以下 12%、5-10 万 10%、10 万以上 8%。',
   },
 ];
 
@@ -171,10 +188,23 @@ const uuid = () => crypto.randomUUID();
     return r.type + ':' + (d.name || d.project || '');
   }));
 
-  let added = 0, skipped = 0;
+  const refresh = process.argv.includes('--refresh');
+  if (refresh) console.log('--refresh:同名的会被改写成最新内容(你在界面上改过的会丢)\n');
+
+  let added = 0, skipped = 0, updated = 0;
   for (const [type, list, key] of [['package', PACKAGES, 'name'], ['brief', BRIEFS, 'project']]) {
     for (const data of list) {
-      if (have.has(type + ':' + data[key])) { skipped++; console.log('  跳过(已存在):', data[key]); continue; }
+      if (have.has(type + ':' + data[key])) {
+        if (refresh) {
+          await pool.query(
+            "UPDATE records SET data=CAST(? AS JSON), updated_by=? WHERE type=? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$." + key + "'))=?",
+            [JSON.stringify(data), by, type, data[key]]);
+          updated++; console.log('  已更新:', data[key]);
+        } else {
+          skipped++; console.log('  跳过(已存在):', data[key]);
+        }
+        continue;
+      }
       await pool.query('INSERT INTO records (id,type,data,updated_by) VALUES (?,?,CAST(? AS JSON),?)',
         [uuid(), type, JSON.stringify(data), by]);
       added++;
@@ -184,7 +214,7 @@ const uuid = () => crypto.randomUUID();
 
   const [[{ n: nPkg }]] = await pool.query("SELECT COUNT(*) n FROM records WHERE type='package'");
   const [[{ n: nBrief }]] = await pool.query("SELECT COUNT(*) n FROM records WHERE type='brief'");
-  console.log(`\n新增 ${added} 条,跳过 ${skipped} 条。现在:套餐 ${nPkg} 个,投放配置 ${nBrief} 份。`);
+  console.log(`\n新增 ${added} 条,更新 ${updated} 条,跳过 ${skipped} 条。现在:套餐 ${nPkg} 个,投放配置 ${nBrief} 份。`);
   console.log('去控制台 Ctrl+F5 刷新就能看到,内容直接在界面上改。');
   await pool.end();
 })();
